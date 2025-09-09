@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "1045577266956",
+    "project_id": "clario-f60b0",
+    "storage_bucket": "clario-f60b0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1045577266956:android:2f1a7b069cdc40192c3b29",
+        "android_client_info": {
+          "package_name": "com.example.clario"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1045577266956-r43has1sdb74kmh6d5bugn0n0rq0cbb4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBy8jY6Y_wexM_F4ACe0nunxC5b7m5Jpi0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1045577266956-r43has1sdb74kmh6d5bugn0n0rq0cbb4.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1045577266956-4sbh1ve2cl50atu3gj6l380ooaql8p9m.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.clario"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1045577266956:android:b09400a2f9fb0bc32c3b29",
+        "android_client_info": {
+          "package_name": "com.project.clario"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1045577266956-r43has1sdb74kmh6d5bugn0n0rq0cbb4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBy8jY6Y_wexM_F4ACe0nunxC5b7m5Jpi0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1045577266956-r43has1sdb74kmh6d5bugn0n0rq0cbb4.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1045577266956-4sbh1ve2cl50atu3gj6l380ooaql8p9m.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.clario"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
