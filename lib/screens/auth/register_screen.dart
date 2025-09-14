@@ -1,4 +1,7 @@
+// lib/screens/auth/register_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../questionnaire/questionnaire_screen.dart';
@@ -43,20 +46,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final success = await authProvider.createUserWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text,
-        userData,
+        userData, // <-- Add this argument
       );
 
       if (success && mounted) {
         final user = Provider.of<AuthProvider>(context, listen: false).user;
 
         if (user != null && !user.emailVerified) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const VerifyEmailScreen()),
-          );
+          context.go('/verify-email');
         } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const QuestionnaireScreen()),
-          );
+          context.go('/questionnaire');
         }
       }
     }
@@ -66,13 +65,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        // Set the background gradient to match the image
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary,
+              Color(0xFF0C1324), // Dark blue from your image
+              Color(0xFF131A2D), // Slightly lighter dark blue from your image
             ],
           ),
         ),
@@ -92,12 +92,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.person_add,
-                          size: 80,
-                          color: Theme.of(context).colorScheme.primary,
+                        // --- Add your logo here ---
+                        Container(
+                          width: 100, // Adjust size as needed
+                          height: 100, // Adjust size as needed
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Image.asset(
+                              'assets/images/clario_logo_bg.jpeg', // Your logo path
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 30), // Spacing below logo
                         Text(
                           'Create Account',
                           style: Theme.of(context)
@@ -105,6 +123,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               .headlineMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.bold,
+                                color: Colors.black87,
                               ),
                         ),
                         const SizedBox(height: 8),
@@ -279,7 +298,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             TextButton(
                               onPressed: () {
-                                Navigator.of(context).pop();
+                                context.go('/login');
                               },
                               child: const Text('Sign In'),
                             ),

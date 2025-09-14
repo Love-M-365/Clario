@@ -1,13 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-enum AppThemeType {
-  calm,
-  energetic,
-  peaceful,
-  focused,
-  creative,
-}
+import '../enum/app_theme_type.dart';
 
 class AppTheme {
   static ThemeData getTheme(AppThemeType themeType) {

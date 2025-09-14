@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
-import 'register_screen.dart';
-import '../home/home_screen.dart';
+// import 'register_screen.dart'; // This is now handled by the router
+// import '../home/home_screen.dart'; // This is now handled by the router
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,16 +28,15 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
+
       final success = await authProvider.signInWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
       if (success && mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        // Use GoRouter for navigation
+        context.go('/home');
       }
     }
   }
@@ -45,13 +45,14 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        // Set the background gradient to match the image
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary,
+              Color(0xFF0C1324), // Dark blue from your image
+              Color(0xFF131A2D), // Slightly lighter dark blue from your image
             ],
           ),
         ),
@@ -71,24 +72,48 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.psychology,
-                          size: 80,
-                          color: Theme.of(context).colorScheme.primary,
+                        // --- Add your logo here ---
+                        Container(
+                          width: 100, // Adjust size as needed
+                          height: 100, // Adjust size as needed
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Image.asset(
+                              'assets/images/clario_logo_bg.jpeg', // Your logo path
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 30), // Spacing below logo
                         Text(
                           'Welcome Back',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors
+                                    .black87, // Adjust text color for contrast
+                              ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Sign in to continue your mental health journey',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 40),
@@ -103,7 +128,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your email';
                             }
-                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                .hasMatch(value)) {
                               return 'Please enter a valid email';
                             }
                             return null;
@@ -118,7 +144,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             prefixIcon: const Icon(Icons.lock_outlined),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                                _obscurePassword
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
                               ),
                               onPressed: () {
                                 setState(() {
@@ -164,9 +192,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Consumer<AuthProvider>(
                             builder: (context, authProvider, child) {
                               return ElevatedButton(
-                                onPressed: authProvider.isLoading ? null : _login,
+                                onPressed:
+                                    authProvider.isLoading ? null : _login,
                                 child: authProvider.isLoading
-                                    ? const CircularProgressIndicator(color: Colors.white)
+                                    ? const CircularProgressIndicator(
+                                        color: Colors.white)
                                     : const Text('Sign In'),
                               );
                             },
@@ -182,11 +212,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             TextButton(
                               onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => const RegisterScreen(),
-                                  ),
-                                );
+                                // Use GoRouter for navigation
+                                context.go('/register');
                               },
                               child: const Text('Sign Up'),
                             ),

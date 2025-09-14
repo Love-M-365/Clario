@@ -47,13 +47,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
+            // Use dark blue and a slightly lighter dark blue for the gradient
             colors: [
-              Theme.of(context).colorScheme.surface,
-              Theme.of(context).colorScheme.background,
+              Color(0xFF0C1324), // Dark blue
+              Color(0xFF131A2D), // Slightly lighter dark blue
             ],
           ),
         ),
@@ -67,13 +68,15 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                 const SizedBox(height: 30),
                 _buildMoodAvatar(),
                 const SizedBox(height: 30),
+                // Modified Card widget for reflection input
                 _buildReflectionInput(),
                 const SizedBox(height: 30),
+                // Modified Card widget for relationship mapping
                 _buildRelationshipMapping(),
                 const SizedBox(height: 30),
+                // Modified Card widget for action buttons
                 _buildActionButtons(),
                 const SizedBox(height: 30),
-                _buildColorThemeSelector(),
               ],
             ),
           ),
@@ -94,14 +97,17 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                 Text(
                   'Welcome back!',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                        // Set text color to white for visibility
+                        color: Colors.white,
+                      ),
                 ),
                 Text(
                   'How are you feeling today?',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+                        // Set text color to a lighter grey
+                        color: Colors.grey[400],
+                      ),
                 ),
               ],
             ),
@@ -110,6 +116,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                 authProvider.signOut();
               },
               icon: const Icon(Icons.logout),
+              color: Colors.white,
             ),
           ],
         );
@@ -154,7 +161,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                         color: userDataProvider.getMoodColor(),
                       ),
                       child: Icon(
-                        _getMoodIcon(userDataProvider.currentMoodData?['mood_score'] ?? 5),
+                        _getMoodIcon(
+                            userDataProvider.currentMoodData?['mood_score'] ??
+                                5),
                         size: 80,
                         color: Colors.white,
                       ),
@@ -179,8 +188,18 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
 
   Widget _buildReflectionInput() {
     return Card(
-      elevation: 8,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      // The image does not have an elevation on its widgets, so we'll set it to 0
+      elevation: 0,
+      color: Colors.white.withOpacity(
+          0.05), // A semi-transparent white for the "frosted" effect
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        // Add a subtle border to match the image
+        side: BorderSide(
+          color: Colors.white.withOpacity(0.1),
+          width: 1.0,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -189,21 +208,27 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
             Text(
               'Daily Reflection',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
             ),
             const SizedBox(height: 15),
             TextField(
               controller: _reflectionController,
               maxLines: 4,
+              style: const TextStyle(
+                  color: Colors.white), // Set text color to white
               decoration: InputDecoration(
-                hintText: 'How was your day? Share your thoughts and feelings...',
+                hintText:
+                    'How was your day? Share your thoughts and feelings...',
+                hintStyle: TextStyle(color: Colors.grey[500]),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.surface,
+                // Make the TextField fill color slightly darker or transparent
+                fillColor: Colors.white.withOpacity(0.05),
               ),
             ),
             const SizedBox(height: 15),
@@ -220,7 +245,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                 ElevatedButton(
                   onPressed: _toggleVoiceInput,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isListening ? Colors.red : Theme.of(context).colorScheme.secondary,
+                    backgroundColor: _isListening
+                        ? Colors.red
+                        : Theme.of(context).colorScheme.secondary,
                     shape: const CircleBorder(),
                     padding: const EdgeInsets.all(15),
                   ),
@@ -239,8 +266,15 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
 
   Widget _buildRelationshipMapping() {
     return Card(
-      elevation: 8,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
+      color: Colors.white.withOpacity(0.05),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: Colors.white.withOpacity(0.1),
+          width: 1.0,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -249,14 +283,16 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
             Text(
               'Relationship Network',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
             ),
             const SizedBox(height: 15),
             Container(
               height: 200,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
+                // Use a slightly different semi-transparent color for the inner container
+                color: Colors.white.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Center(
@@ -272,8 +308,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                     Text(
                       'Relationship mapping will appear here',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                            color: Colors.grey[400],
+                          ),
                     ),
                   ],
                 ),
@@ -290,8 +326,15 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
       children: [
         Expanded(
           child: Card(
-            elevation: 8,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            elevation: 0,
+            color: Colors.white.withOpacity(0.05),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color: Colors.white.withOpacity(0.1),
+                width: 1.0,
+              ),
+            ),
             child: InkWell(
               onTap: _showAIChatDialog,
               borderRadius: BorderRadius.circular(20),
@@ -307,7 +350,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                     const SizedBox(height: 10),
                     const Text(
                       'Talk to AI',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -318,8 +364,15 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
         const SizedBox(width: 15),
         Expanded(
           child: Card(
-            elevation: 8,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            elevation: 0,
+            color: Colors.white.withOpacity(0.05),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color: Colors.white.withOpacity(0.1),
+                width: 1.0,
+              ),
+            ),
             child: InkWell(
               onTap: _showEmptyChairDialog,
               borderRadius: BorderRadius.circular(20),
@@ -335,7 +388,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                     const SizedBox(height: 10),
                     const Text(
                       'Empty Chair',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -346,8 +402,15 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
         const SizedBox(width: 15),
         Expanded(
           child: Card(
-            elevation: 8,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            elevation: 0,
+            color: Colors.white.withOpacity(0.05),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color: Colors.white.withOpacity(0.1),
+                width: 1.0,
+              ),
+            ),
             child: InkWell(
               onTap: _showSleepAnalysisDialog,
               borderRadius: BorderRadius.circular(20),
@@ -363,7 +426,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                     const SizedBox(height: 10),
                     const Text(
                       'Sleep Analysis',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -375,71 +441,13 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
     );
   }
 
-  Widget _buildColorThemeSelector() {
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
-        return Card(
-          elevation: 8,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Color Therapy',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 15),
-                Text(
-                  'Choose a color theme that matches your current mood',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 15),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: AppThemeType.values.map((theme) {
-                    final isSelected = themeProvider.currentTheme == theme;
-                    final colors = AppTheme.getGradientColors(theme);
-                    
-                    return GestureDetector(
-                      onTap: () => themeProvider.setTheme(theme),
-                      child: Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: colors),
-                          borderRadius: BorderRadius.circular(30),
-                          border: isSelected
-                              ? Border.all(color: Colors.black, width: 3)
-                              : null,
-                        ),
-                        child: isSelected
-                            ? const Icon(Icons.check, color: Colors.white)
-                            : null,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   void _saveReflection() async {
     if (_reflectionController.text.isNotEmpty) {
-      final userDataProvider = Provider.of<UserDataProvider>(context, listen: false);
+      final userDataProvider =
+          Provider.of<UserDataProvider>(context, listen: false);
       await userDataProvider.saveReflection(_reflectionController.text, 'text');
       _reflectionController.clear();
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Reflection saved successfully!')),
       );
@@ -450,12 +458,13 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
     setState(() {
       _isListening = !_isListening;
     });
-    
+
     // TODO: Implement speech-to-text functionality
     if (_isListening) {
       // Start listening
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Voice input started (feature coming soon)')),
+        const SnackBar(
+            content: Text('Voice input started (feature coming soon)')),
       );
     } else {
       // Stop listening
@@ -470,7 +479,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('AI Chat'),
-        content: const Text('AI chat feature will be integrated with your Google AI Cloud services.'),
+        content: const Text(
+            'AI chat feature will be integrated with your Google AI Cloud services.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -519,7 +529,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sleep Analysis'),
-        content: const Text('Sleep tracking and analysis features will help you monitor your sleep patterns and provide personalized recommendations.'),
+        content: const Text(
+            'Sleep tracking and analysis features will help you monitor your sleep patterns and provide personalized recommendations.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

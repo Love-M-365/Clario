@@ -1,6 +1,17 @@
+// lib/screens/onboarding/onboarding_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../auth/login_screen.dart';
+
+// Extension to mix a color with another color (e.g., black)
+extension MixColor on Color {
+  Color mixWith(Color color, [double amount = 0.5]) {
+    return Color.lerp(this, color, amount)!;
+  }
+}
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -16,31 +27,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<OnboardingPage> _pages = [
     OnboardingPage(
       title: 'Welcome to Clario',
-      description: 'Your personal AI-powered mental health companion designed specifically for youth.',
+      description:
+          'Your personal AI-powered mental health companion designed specifically for youth.',
       icon: Icons.psychology,
       color: const Color(0xFF6B73FF),
     ),
     OnboardingPage(
       title: 'AI Therapy Sessions',
-      description: 'Experience personalized therapy sessions with our advanced AI that understands your unique needs.',
+      description:
+          'Experience personalized therapy sessions with our advanced AI that understands your unique needs.',
       icon: Icons.chat_bubble_outline,
       color: const Color(0xFF4ECDC4),
     ),
     OnboardingPage(
       title: 'Mood Tracking',
-      description: 'Track your daily emotions and see patterns in your mental health journey.',
+      description:
+          'Track your daily emotions and see patterns in your mental health journey.',
       icon: Icons.favorite,
       color: const Color(0xFFFF6B6B),
     ),
     OnboardingPage(
       title: 'Sleep Analysis',
-      description: 'Monitor your sleep patterns and get personalized recommendations for better rest.',
+      description:
+          'Monitor your sleep patterns and get personalized recommendations for better rest.',
       icon: Icons.bedtime,
       color: const Color(0xFF9C27B0),
     ),
     OnboardingPage(
       title: 'Color Therapy',
-      description: 'Customize your app experience with therapeutic colors that match your mood.',
+      description:
+          'Customize your app experience with therapeutic colors that match your mood.',
       icon: Icons.palette,
       color: const Color(0xFFFF9F43),
     ),
@@ -51,12 +67,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
+          // Use the mixWith() extension to create a two-color gradient
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
               _pages[_currentPage].color,
-              _pages[_currentPage].color.withOpacity(0.7),
+              // Mix the current color with black to create a shaded gradient
+              _pages[_currentPage].color.mixWith(Colors.black, 0.4),
             ],
           ),
         ),
@@ -105,19 +123,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             },
                             child: const Text(
                               'Previous',
-                              style: TextStyle(color: Colors.white, fontSize: 16),
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 16),
                             ),
                           )
                         else
                           const SizedBox(width: 80),
                         ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             if (_currentPage == _pages.length - 1) {
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(
-                                  builder: (context) => const LoginScreen(),
-                                ),
-                              );
+                              final prefs =
+                                  await SharedPreferences.getInstance();
+                              await prefs.setBool(
+                                  'has_completed_onboarding', true);
+
+                              if (mounted) {
+                                context.go('/login');
+                              }
                             } else {
                               _pageController.nextPage(
                                 duration: const Duration(milliseconds: 300),
@@ -128,11 +150,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: _pages[_currentPage].color,
-                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 30, vertical: 15),
                           ),
                           child: Text(
-                            _currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            _currentPage == _pages.length - 1
+                                ? 'Get Started'
+                                : 'Next',
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],

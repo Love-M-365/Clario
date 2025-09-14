@@ -9,15 +9,18 @@ class AuthProvider with ChangeNotifier {
   User? _user;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isReady = false; // Add this new property
 
   User? get user => _user;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  bool get isAuthenticated => _user != null;
+  bool get isLoggedIn => _user != null;
+  bool get isReady => _isReady; // Add this new getter
 
   AuthProvider() {
     _auth.authStateChanges().listen((User? user) {
       _user = user;
+      _isReady = true; // Set to true once the initial auth state is known
       notifyListeners();
     });
   }
@@ -35,7 +38,6 @@ class AuthProvider with ChangeNotifier {
 
       _user = result.user;
 
-      // Update last login in Realtime DB
       if (_user != null) {
         await _dbRef
             .child("users/${_user!.uid}/lastLoginAt")
@@ -76,10 +78,8 @@ class AuthProvider with ChangeNotifier {
       _user = result.user;
 
       if (_user != null) {
-        // Send verification email
         await _user!.sendEmailVerification();
 
-        // Save user data in Realtime Database
         await _dbRef.child("users/${_user!.uid}").set({
           ...userData,
           'email': email,

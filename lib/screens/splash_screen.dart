@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
+// The routes are now handled by GoRouter, so explicit imports for screens might not be needed, but they don't cause harm.
 import 'onboarding/onboarding_screen.dart';
 import 'home/home_screen.dart';
 
@@ -46,18 +49,26 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _navigateToNextScreen() async {
+    // Wait for the animation to complete and providers to be ready
     await Future.delayed(const Duration(seconds: 3));
-    
+
     if (mounted) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => authProvider.isAuthenticated
-              ? const HomeScreen()
-              : const OnboardingScreen(),
-        ),
-      );
+      final prefs = await SharedPreferences.getInstance();
+      final hasCompletedOnboarding =
+          prefs.getBool('has_completed_onboarding') ?? false;
+
+      if (!hasCompletedOnboarding) {
+        // If it's the first launch, go to the onboarding screen
+        context.go('/onboarding');
+      } else {
+        // If onboarding is completed, check the user's login status
+        if (authProvider.isLoggedIn) {
+          context.go('/home');
+        } else {
+          context.go('/login');
+        }
+      }
     }
   }
 
@@ -71,13 +82,14 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        // The background from the provided image
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary,
+              Color(0xFF0C1324), // Dark blue
+              Color(0xFF131A2D), // Slightly lighter dark blue
             ],
           ),
         ),
@@ -92,11 +104,12 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      // Replace the Icon with your custom logo from assets
                       Container(
-                        width: 120,
-                        height: 120,
+                        width: 250,
+                        height: 250,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Colors.transparent,
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
@@ -106,28 +119,32 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.psychology,
-                          size: 60,
-                          color: Color(0xFF6B73FF),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Image.asset(
+                            'assets/images/clario_logo.png', // <-- Path to your logo
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 30),
                       Text(
                         'Clario',
-                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 48,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 48,
+                                ),
                       ),
                       const SizedBox(height: 10),
                       Text(
                         'Your Mental Health Companion',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 18,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 18,
+                                ),
                       ),
                       const SizedBox(height: 50),
                       const CircularProgressIndicator(
