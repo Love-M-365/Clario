@@ -1,4 +1,4 @@
-package com.example.new_clario
+package com.example.clario
 
 import io.flutter.embedding.android.FlutterActivity
 

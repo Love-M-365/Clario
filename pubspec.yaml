@@ -28,7 +28,6 @@ dependencies:
   
   # Audio & Voice
   speech_to_text: ^7.0.0  # or latest on pub.dev
-  text_to_speech: ^0.2.3
   audioplayers: ^6.5.1
   flutter_tts: ^4.2.3
   

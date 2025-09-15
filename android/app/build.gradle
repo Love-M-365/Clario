@@ -1,3 +1,5 @@
+// app/build.gradle
+
 plugins {
     id "com.android.application"
     id "kotlin-android"
@@ -42,19 +44,18 @@ android {
 
     ndkVersion "27.0.12077973"
 
-  buildTypes {
-    release {
-        signingConfig signingConfigs.debug
-        minifyEnabled true          // Enable code shrinking
-        shrinkResources true        // Enable resource shrinking
-        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
     }
 }
 
-}
-
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8" // Use jdk8 for compatibility
     implementation 'com.google.firebase:firebase-analytics'
     implementation 'androidx.multidex:multidex:2.0.1'
 }
