@@ -6,7 +6,7 @@ import '../../providers/theme_provider.dart';
 import 'main_dashboard_screen.dart'; // Your dashboard screen
 import '../sleep_screen.dart';
 import '../settings_screen.dart';
-import '../empty_chair_screen.dart'; // New screen for Empty Chair mode
+import '../empty_chair_intro_screen.dart'; // New screen for Empty Chair mode
 import '../../enum/app_theme_type.dart';
 import '../../utils/theme_data.dart';
 
@@ -23,7 +23,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = [
     const MainDashboardScreen(),
     const SleepScreen(),
-    const EmptyChairScreen(), // Add the new screen
+    const EmptyChairIntroScreen(), // Add the new screen
     const SettingsScreen(),
   ];
 

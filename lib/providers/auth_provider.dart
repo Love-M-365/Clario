@@ -1,3 +1,5 @@
+// lib/providers/auth_provider.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -25,11 +27,22 @@ class AuthProvider with ChangeNotifier {
     });
   }
 
+  // Method to manage the loading state
+  void setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  // Method to clear the error message
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   Future<bool> signInWithEmailAndPassword(String email, String password) async {
     try {
-      _isLoading = true;
-      _errorMessage = null;
-      notifyListeners();
+      setLoading(true);
+      clearError();
 
       final UserCredential result = await _auth.signInWithEmailAndPassword(
         email: email,
@@ -39,21 +52,21 @@ class AuthProvider with ChangeNotifier {
       _user = result.user;
 
       if (_user != null) {
+        // Update last login timestamp in Realtime Database
         await _dbRef
             .child("users/${_user!.uid}/lastLoginAt")
             .set(DateTime.now().toIso8601String());
       }
 
-      _isLoading = false;
-      notifyListeners();
+      setLoading(false);
       return true;
     } on FirebaseAuthException catch (e) {
-      _isLoading = false;
+      setLoading(false);
       _errorMessage = _getErrorMessage(e.code);
       notifyListeners();
       return false;
     } catch (_) {
-      _isLoading = false;
+      setLoading(false);
       _errorMessage = 'An unexpected error occurred';
       notifyListeners();
       return false;
@@ -61,14 +74,10 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> createUserWithEmailAndPassword(
-    String email,
-    String password,
-    Map<String, dynamic> userData,
-  ) async {
+      String email, String password, Map<String, dynamic> userData) async {
     try {
-      _isLoading = true;
-      _errorMessage = null;
-      notifyListeners();
+      setLoading(true);
+      clearError();
 
       final UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -80,6 +89,7 @@ class AuthProvider with ChangeNotifier {
       if (_user != null) {
         await _user!.sendEmailVerification();
 
+        // Save new user data to Realtime Database
         await _dbRef.child("users/${_user!.uid}").set({
           ...userData,
           'email': email,
@@ -88,16 +98,15 @@ class AuthProvider with ChangeNotifier {
         });
       }
 
-      _isLoading = false;
-      notifyListeners();
+      setLoading(false);
       return true;
     } on FirebaseAuthException catch (e) {
-      _isLoading = false;
+      setLoading(false);
       _errorMessage = _getErrorMessage(e.code);
       notifyListeners();
       return false;
     } catch (_) {
-      _isLoading = false;
+      setLoading(false);
       _errorMessage = 'An unexpected error occurred';
       notifyListeners();
       return false;
@@ -130,10 +139,5 @@ class AuthProvider with ChangeNotifier {
       default:
         return 'An error occurred. Please try again.';
     }
-  }
-
-  void clearError() {
-    _errorMessage = null;
-    notifyListeners();
   }
 }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../home/home_screen.dart';
+import '../home/home_screen.dart'; // No longer needed, as navigation is handled by router.
 
 class QuestionnaireScreen extends StatefulWidget {
   const QuestionnaireScreen({super.key});
@@ -153,7 +154,6 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Reference to the user's node
         final userRef = FirebaseDatabase.instance.ref('users/${user.uid}');
 
         await userRef.update({
@@ -162,11 +162,12 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
           'registration_completed': true,
         });
 
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        }
+        // Use a PostFrameCallback to safely navigate after the build finishes
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            context.go('/home');
+          }
+        });
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -183,13 +184,13 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary,
+              Color(0xFF0C1324), // Dark blue
+              Color(0xFF131A2D), // Slightly lighter dark blue
             ],
           ),
         ),
@@ -280,8 +281,15 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Card(
-        elevation: 10,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0,
+        color: Colors.white.withOpacity(0.05),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: Colors.white.withOpacity(0.1),
+            width: 1.0,
+          ),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(30),
           child: Column(
@@ -291,6 +299,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                 question.text,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
               ),
               const SizedBox(height: 30),
@@ -336,12 +345,11 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                    ? Colors.white.withOpacity(0.2) // Highlight color
                     : null,
                 border: Border.all(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.grey.withOpacity(0.3),
+                  color:
+                      isSelected ? Colors.white : Colors.white.withOpacity(0.1),
                   width: 2,
                 ),
                 borderRadius: BorderRadius.circular(10),
@@ -356,6 +364,15 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                         _answers[question.id] = value;
                       });
                     },
+                    fillColor: MaterialStateProperty.resolveWith<Color>(
+                      (Set<MaterialState> states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return Colors.white; // Selected radio button color
+                        }
+                        return Colors.white
+                            .withOpacity(0.5); // Unselected color
+                      },
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -363,6 +380,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                       option,
                       style: TextStyle(
                         fontSize: 16,
+                        color: Colors.white,
                         fontWeight:
                             isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
@@ -402,13 +420,10 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
             child: Container(
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                    : null,
+                color: isSelected ? Colors.white.withOpacity(0.2) : null,
                 border: Border.all(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.grey.withOpacity(0.3),
+                  color:
+                      isSelected ? Colors.white : Colors.white.withOpacity(0.1),
                   width: 2,
                 ),
                 borderRadius: BorderRadius.circular(10),
@@ -427,6 +442,16 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                         _answers[question.id] = selectedOptions;
                       });
                     },
+                    fillColor: MaterialStateProperty.resolveWith<Color>(
+                      (Set<MaterialState> states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return Colors.white; // Selected checkbox color
+                        }
+                        return Colors.white
+                            .withOpacity(0.5); // Unselected color
+                      },
+                    ),
+                    checkColor: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -434,6 +459,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
                       option,
                       style: TextStyle(
                         fontSize: 16,
+                        color: Colors.white,
                         fontWeight:
                             isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
@@ -458,7 +484,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
           currentValue.round().toString(),
           style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+                color: Colors.white,
               ),
         ),
         const SizedBox(height: 20),
@@ -472,12 +498,21 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
               _answers[question.id] = value;
             });
           },
+          activeColor: Colors.white,
+          inactiveColor: Colors.white.withOpacity(0.5),
+          thumbColor: Theme.of(context).colorScheme.secondary,
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('${question.minValue}'),
-            Text('${question.maxValue}'),
+            Text(
+              '${question.minValue}',
+              style: const TextStyle(color: Colors.white),
+            ),
+            Text(
+              '${question.maxValue}',
+              style: const TextStyle(color: Colors.white),
+            ),
           ],
         ),
       ],
@@ -487,9 +522,17 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
   Widget _buildTextInput(Question question) {
     return TextFormField(
       maxLines: 5,
-      decoration: const InputDecoration(
+      style: const TextStyle(color: Colors.white),
+      initialValue: _answers[question.id] as String?,
+      decoration: InputDecoration(
         hintText: 'Type your answer here...',
-        border: OutlineInputBorder(),
+        hintStyle: TextStyle(color: Colors.grey[500]),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.05),
       ),
       onChanged: (value) {
         _answers[question.id] = value;

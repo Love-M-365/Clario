@@ -8,7 +8,12 @@ import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/home/main_navigation.dart';
 import '../screens/splash_screen.dart';
-import '../screens/onboarding/onboarding_screen.dart'; // Make sure this is imported
+import '../screens/onboarding/onboarding_screen.dart';
+import '../screens/auth/verify_email_screen.dart';
+import '../screens/questionnaire/questionnaire_screen.dart';
+import '../screens/empty_chair_intro_screen.dart';
+import '../screens/empty_chair_session_screen.dart';
+import '../screens/empty_chair_setup_screen.dart';
 
 final GoRouter _router = GoRouter(
   initialLocation: '/',
@@ -34,9 +39,36 @@ final GoRouter _router = GoRouter(
       builder: (context, state) => const RegisterScreen(),
     ),
     GoRoute(
+      path: '/verify-email',
+      name: 'verify_email',
+      builder: (context, state) => const VerifyEmailScreen(),
+    ),
+    GoRoute(
+      path: '/questionnaire',
+      name: 'questionnaire',
+      builder: (context, state) => const QuestionnaireScreen(),
+    ),
+    GoRoute(
       path: '/home',
       name: 'home',
       builder: (context, state) => const MainNavigation(),
+    ),
+    GoRoute(
+      path: '/empty-chair/intro',
+      name: 'empty_chair_intro',
+      builder: (context, state) => const EmptyChairIntroScreen(),
+    ),
+    GoRoute(
+      path: '/empty-chair/setup',
+      name: 'empty_chair_setup',
+      builder: (context, state) => const EmptyChairSetupScreen(),
+    ),
+    GoRoute(
+      path: '/empty-chair/session',
+      name: 'empty_chair_session',
+      builder: (context, state) => EmptyChairSessionScreen(
+        chairMemberName: state.extra as String,
+      ),
     ),
   ],
   // REMOVE THIS ENTIRE REDIRECT BLOCK

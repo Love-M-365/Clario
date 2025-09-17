@@ -43,18 +43,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'registrationCompleted': false,
       };
 
+      // Show a loading indicator during registration
+      authProvider.setLoading(true);
+
       final success = await authProvider.createUserWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text,
-        userData, // <-- Add this argument
+        userData,
       );
+
+      // Stop loading indicator
+      authProvider.setLoading(false);
 
       if (success && mounted) {
         final user = Provider.of<AuthProvider>(context, listen: false).user;
 
         if (user != null && !user.emailVerified) {
+          // Redirect to the verify email screen
           context.go('/verify-email');
         } else {
+          // Redirect to the questionnaire if email is already verified
           context.go('/questionnaire');
         }
       }

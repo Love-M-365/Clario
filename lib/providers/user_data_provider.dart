@@ -11,10 +11,16 @@ class UserDataProvider with ChangeNotifier {
   Map<String, dynamic>? _currentMoodData;
   bool _isLoading = false;
 
+  // New properties for avatar
+  String? _selectedAvatarId;
+  String _currentEmotion = 'neutral'; // AI-driven emotion state
+
   Map<String, dynamic>? get userData => _userData;
   List<Map<String, dynamic>> get dailyReflections => _dailyReflections;
   Map<String, dynamic>? get currentMoodData => _currentMoodData;
   bool get isLoading => _isLoading;
+  String? get selectedAvatarId => _selectedAvatarId;
+  String get currentEmotion => _currentEmotion;
 
   Future<void> loadUserData() async {
     final user = _auth.currentUser;
@@ -24,13 +30,13 @@ class UserDataProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Load basic user data
       final userSnapshot = await _dbRef.child("users/${user.uid}").get();
       if (userSnapshot.exists && userSnapshot.value is Map) {
         _userData = Map<String, dynamic>.from(userSnapshot.value as Map);
+        // Load the selected avatar ID from the database
+        _selectedAvatarId = _userData?['selectedAvatarId'];
       }
 
-      // Load last 10 reflections
       final reflectionsSnapshot = await _dbRef
           .child("users/${user.uid}/reflections")
           .orderByChild("timestamp")
@@ -70,10 +76,42 @@ class UserDataProvider with ChangeNotifier {
 
       if (moodSnapshot.exists && moodSnapshot.value is Map) {
         _currentMoodData = Map<String, dynamic>.from(moodSnapshot.value as Map);
+        // Set the emotion based on the mood score
+        setCurrentEmotionFromScore(_currentMoodData!['mood_score'] ?? 5);
       }
     } catch (e) {
       print('Error loading mood data: $e');
     }
+  }
+
+  // New method to set the avatar and update the database
+  Future<void> setSelectedAvatar(String avatarId) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      _selectedAvatarId = avatarId;
+      await _dbRef.child("users/${user.uid}/selectedAvatarId").set(avatarId);
+      notifyListeners();
+    } catch (e) {
+      print('Error setting avatar: $e');
+    }
+  }
+
+  // Method to set the AI-driven emotion
+  void setCurrentEmotionFromScore(int moodScore) {
+    if (moodScore >= 8) {
+      _currentEmotion = 'happy';
+    } else if (moodScore >= 6) {
+      _currentEmotion = 'content';
+    } else if (moodScore >= 4) {
+      _currentEmotion = 'neutral';
+    } else if (moodScore >= 2) {
+      _currentEmotion = 'sad';
+    } else {
+      _currentEmotion = 'very_sad';
+    }
+    notifyListeners();
   }
 
   Future<void> saveReflection(String text, String type) async {
@@ -90,7 +128,7 @@ class UserDataProvider with ChangeNotifier {
         'mood_score': _calculateMoodScore(text),
       });
 
-      await loadUserData(); // Refresh
+      await loadUserData(); // Refresh to update the UI
     } catch (e) {
       print('Error saving reflection: $e');
     }
@@ -112,6 +150,7 @@ class UserDataProvider with ChangeNotifier {
       });
 
       _currentMoodData = moodData;
+      setCurrentEmotionFromScore(moodData['mood_score'] ?? 5);
       notifyListeners();
     } catch (e) {
       print('Error updating mood data: $e');
@@ -152,16 +191,33 @@ class UserDataProvider with ChangeNotifier {
     return score.clamp(1, 10);
   }
 
+  // Refactored to use the selected avatar and current emotion
   String getMoodAvatarAsset() {
-    if (_currentMoodData == null) return 'assets/images/avatar_neutral.png';
+    if (_selectedAvatarId == null) {
+      // Use a default neutral avatar if none is selected
+      return 'assets/images/default_neutral_avatar.png';
+    }
 
-    final moodScore = _currentMoodData!['mood_score'] ?? 5;
+    // Example: assets/avatars/avatar_1_happy.png
+    return 'assets/avatars/${_selectedAvatarId!.split('/').last.split('.').first}_$_currentEmotion.png';
+  }
 
-    if (moodScore >= 8) return 'assets/images/avatar_happy.png';
-    if (moodScore >= 6) return 'assets/images/avatar_content.png';
-    if (moodScore >= 4) return 'assets/images/avatar_neutral.png';
-    if (moodScore >= 2) return 'assets/images/avatar_sad.png';
-    return 'assets/images/avatar_very_sad.png';
+  Future<void> addEmptyChairMember(String name) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      // This will create a list of previous chair members
+      final newMemberRef =
+          _dbRef.child("users/${user.uid}/emptyChairMembers").push();
+      await newMemberRef.set({
+        'name': name,
+        'createdAt': DateTime.now().toIso8601String(),
+      });
+      notifyListeners();
+    } catch (e) {
+      print('Error saving empty chair member: $e');
+    }
   }
 
   Color getMoodColor() {

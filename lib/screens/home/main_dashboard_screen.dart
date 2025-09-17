@@ -51,7 +51,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            // Use dark blue and a slightly lighter dark blue for the gradient
             colors: [
               Color(0xFF0C1324), // Dark blue
               Color(0xFF131A2D), // Slightly lighter dark blue
@@ -68,13 +67,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                 const SizedBox(height: 30),
                 _buildMoodAvatar(),
                 const SizedBox(height: 30),
-                // Modified Card widget for reflection input
                 _buildReflectionInput(),
                 const SizedBox(height: 30),
-                // Modified Card widget for relationship mapping
                 _buildRelationshipMapping(),
                 const SizedBox(height: 30),
-                // Modified Card widget for action buttons
                 _buildActionButtons(),
                 const SizedBox(height: 30),
               ],
@@ -98,14 +94,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                   'Welcome back!',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        // Set text color to white for visibility
                         color: Colors.white,
                       ),
                 ),
                 Text(
                   'How are you feeling today?',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        // Set text color to a lighter grey
                         color: Colors.grey[400],
                       ),
                 ),
@@ -127,6 +121,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
   Widget _buildMoodAvatar() {
     return Consumer<UserDataProvider>(
       builder: (context, userDataProvider, child) {
+        if (userDataProvider.isLoading) {
+          return const Center(
+              child: CircularProgressIndicator(color: Colors.white));
+        }
+
         return Center(
           child: AnimatedBuilder(
             animation: _avatarPulseAnimation,
@@ -153,19 +152,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                     ],
                   ),
                   child: Center(
-                    child: Container(
-                      width: 150,
-                      height: 150,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: userDataProvider.getMoodColor(),
-                      ),
-                      child: Icon(
-                        _getMoodIcon(
-                            userDataProvider.currentMoodData?['mood_score'] ??
-                                5),
-                        size: 80,
-                        color: Colors.white,
+                    child: ClipOval(
+                      child: Image.asset(
+                        userDataProvider.getMoodAvatarAsset(),
+                        width: 150,
+                        height: 150,
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
@@ -178,23 +170,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
     );
   }
 
-  IconData _getMoodIcon(int moodScore) {
-    if (moodScore >= 8) return Icons.sentiment_very_satisfied;
-    if (moodScore >= 6) return Icons.sentiment_satisfied;
-    if (moodScore >= 4) return Icons.sentiment_neutral;
-    if (moodScore >= 2) return Icons.sentiment_dissatisfied;
-    return Icons.sentiment_very_dissatisfied;
-  }
-
   Widget _buildReflectionInput() {
     return Card(
-      // The image does not have an elevation on its widgets, so we'll set it to 0
       elevation: 0,
-      color: Colors.white.withOpacity(
-          0.05), // A semi-transparent white for the "frosted" effect
+      color: Colors.white.withOpacity(0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        // Add a subtle border to match the image
         side: BorderSide(
           color: Colors.white.withOpacity(0.1),
           width: 1.0,
@@ -216,8 +197,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
             TextField(
               controller: _reflectionController,
               maxLines: 4,
-              style: const TextStyle(
-                  color: Colors.white), // Set text color to white
+              style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText:
                     'How was your day? Share your thoughts and feelings...',
@@ -227,7 +207,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                // Make the TextField fill color slightly darker or transparent
                 fillColor: Colors.white.withOpacity(0.05),
               ),
             ),
@@ -291,7 +270,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
             Container(
               height: 200,
               decoration: BoxDecoration(
-                // Use a slightly different semi-transparent color for the inner container
                 color: Colors.white.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(15),
               ),
