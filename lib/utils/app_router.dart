@@ -52,46 +52,57 @@ final GoRouter _router = GoRouter(
       path: '/home',
       name: 'home',
       builder: (context, state) => const MainNavigation(),
-    ),
-    GoRoute(
-      path: '/empty-chair/intro',
-      name: 'empty_chair_intro',
-      builder: (context, state) => const EmptyChairIntroScreen(),
-    ),
-    GoRoute(
-      path: '/empty-chair/setup',
-      name: 'empty_chair_setup',
-      builder: (context, state) => const EmptyChairSetupScreen(),
-    ),
-    GoRoute(
-      path: '/empty-chair/session',
-      name: 'empty_chair_session',
-      builder: (context, state) => EmptyChairSessionScreen(
-        chairMemberName: state.extra as String,
-      ),
+      routes: [
+        GoRoute(
+          path: 'empty-chair-intro',
+          name: 'empty_chair_intro',
+          builder: (context, state) => const EmptyChairIntroScreen(),
+        ),
+        GoRoute(
+          path: 'empty-chair-setup',
+          name: 'empty_chair_setup',
+          builder: (context, state) => const EmptyChairSetupScreen(),
+        ),
+        GoRoute(
+          path: 'empty-chair-session/:name',
+          name: 'empty_chair_session',
+          builder: (context, state) => EmptyChairSessionScreen(
+            chairMemberName: state.pathParameters['name']!,
+          ),
+        ),
+      ],
     ),
   ],
-  // REMOVE THIS ENTIRE REDIRECT BLOCK
-  // redirect: (BuildContext context, GoRouterState state) {
-  //   final authProvider = Provider.of<AuthProvider>(context, listen: false);
-  //   final isLoggedIn = authProvider.isLoggedIn;
-  //   final isGoingToSplash = state.matchedLocation == '/';
-  //
-  //   if (isGoingToSplash) {
-  //     return null;
-  //   }
-  //
-  //   if (!isLoggedIn) {
-  //     final isLoggingInOrRegistering = state.matchedLocation == '/login' || state.matchedLocation == '/register';
-  //     return isLoggingInOrRegistering ? null : '/login';
-  //   }
-  //
-  //   if (isLoggedIn && (state.matchedLocation == '/login' || state.matchedLocation == '/register')) {
-  //     return '/home';
-  //   }
-  //
-  //   return null;
-  // },
+  redirect: (BuildContext context, GoRouterState state) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final bool isLoggedIn = authProvider.isLoggedIn;
+    final bool isReady = authProvider.isReady;
+
+    final isStarting = state.matchedLocation == '/';
+    final isAuthPage = state.matchedLocation == '/login' ||
+        state.matchedLocation == '/register';
+    final isOnboarding = state.matchedLocation == '/onboarding';
+
+    // Wait for auth state to be ready
+    if (!isReady) return null;
+
+    // If not logged in:
+    // - If on onboarding or an auth page, allow.
+    // - Otherwise, redirect to login.
+    if (!isLoggedIn) {
+      if (isOnboarding || isAuthPage) return null;
+      return '/login';
+    }
+
+    // If logged in:
+    // - If on an auth page, redirect to home.
+    if (isLoggedIn) {
+      if (isAuthPage) return '/home';
+    }
+
+    // No redirection needed
+    return null;
+  },
 );
 
 GoRouter get appRouter => _router;

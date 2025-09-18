@@ -1,5 +1,3 @@
-// lib/screens/empty_chair_intro_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
@@ -13,45 +11,57 @@ class EmptyChairIntroScreen extends StatefulWidget {
 
 class _EmptyChairIntroScreenState extends State<EmptyChairIntroScreen>
     with TickerProviderStateMixin {
-  // <-- Change 'SingleTickerProviderStateMixin' to 'TickerProviderStateMixin'
-  late AnimationController _fadeAnimationController;
-  late Animation<double> _fadeAnimation;
-  late AnimationController _lottieAnimationController;
-  late Animation<double> _scaleAnimation;
+  late AnimationController _mainAnimationController;
+  late Animation<Offset> _textSlideAnimation;
+  late Animation<double> _lottieScaleAnimation;
+  late Animation<double> _imageFadeAnimation;
+  late Animation<double> _buttonScaleAnimation;
 
   @override
   void initState() {
     super.initState();
 
-    _fadeAnimationController = AnimationController(
+    _mainAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1500),
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+
+    _textSlideAnimation = Tween<Offset>(
+      begin: const Offset(0.0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _mainAnimationController,
+      curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
+    ));
+
+    _lottieScaleAnimation = Tween<double>(
+      begin: 0.7,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _mainAnimationController,
+      curve: const Interval(0.0, 0.7, curve: Curves.elasticOut),
+    ));
+
+    _imageFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _fadeAnimationController,
-        curve: Curves.easeIn,
+        parent: _mainAnimationController,
+        curve: const Interval(0.4, 1.0, curve: Curves.easeIn),
       ),
     );
-    _fadeAnimationController.forward();
 
-    _lottieAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-
-    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
+    _buttonScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _lottieAnimationController,
-        curve: Curves.easeInOut,
+        parent: _mainAnimationController,
+        curve: const Interval(0.6, 1.0, curve: Curves.bounceOut),
       ),
     );
+
+    _mainAnimationController.forward();
   }
 
   @override
   void dispose() {
-    _fadeAnimationController.dispose();
-    _lottieAnimationController.dispose();
+    _mainAnimationController.dispose();
     super.dispose();
   }
 
@@ -61,82 +71,174 @@ class _EmptyChairIntroScreenState extends State<EmptyChairIntroScreen>
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
-              Color(0xFF0C1324),
-              Color(0xFF131A2D),
+              Color(0xFF141E30),
+              Color(0xFF243B55),
             ],
           ),
         ),
         child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Spacer(),
-                  AnimatedBuilder(
-                    animation: _scaleAnimation,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _scaleAnimation.value,
-                        child: Lottie.asset(
-                          'assets/animations/chair.json',
-                          width: 200,
-                          height: 200,
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 40),
-                  Text(
-                    "The empty chair mode helps you process difficult emotions and unresolved conflicts.",
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 28,
-                        ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    "You will speak from 2 points of view: first as yourself and then as the person or part of yourself you place in the empty chair.",
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.white70,
-                          fontSize: 18,
-                        ),
-                  ),
-                  const Spacer(flex: 2),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        context.go('/empty-chair/setup');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 40),
+                    // Hero Animation
+                    Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 280,
+                            height: 280,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  Colors.white.withOpacity(0.05),
+                                  Colors.transparent,
+                                ],
+                                radius: 0.9,
+                              ),
+                            ),
+                          ),
+                          ScaleTransition(
+                            scale: _lottieScaleAnimation,
+                            child: Lottie.asset(
+                              'assets/animations/chair.json',
+                              width: 250,
+                              height: 250,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+
+                    // Headline
+                    SlideTransition(
+                      position: _textSlideAnimation,
+                      child: FadeTransition(
+                        opacity: _mainAnimationController,
+                        child: Text(
+                          "Your Partner in\nSelf-Reflection",
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 34,
+                                letterSpacing: 1.2,
+                              ),
                         ),
                       ),
-                      child: const Text(
-                        'Get Started',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Subtext
+                    SlideTransition(
+                      position: _textSlideAnimation,
+                      child: FadeTransition(
+                        opacity: _mainAnimationController,
+                        child: Text(
+                          "The empty chair mode helps you process emotions and unresolved conflicts by exploring different perspectives.",
+                          textAlign: TextAlign.center,
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: Colors.white70,
+                                    fontSize: 18,
+                                    height: 1.5,
+                                  ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+
+                    // Card Image Section
+                    FadeTransition(
+                      opacity: _imageFadeAnimation,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.asset(
+                            'assets/images/empty_chairs.jpeg',
+                            width: double.infinity,
+                            height: 200,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              ),
+
+              // Floating Action Button → Modern Rounded Button
+              Positioned(
+                bottom: 40,
+                left: 24,
+                right: 24,
+                child: ScaleTransition(
+                  scale: _buttonScaleAnimation,
+                  child: GestureDetector(
+                    onTap: () => context.go('/home/empty-chair-setup'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "Get Started",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Icon(Icons.arrow_forward_rounded,
+                                color: Colors.white),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),

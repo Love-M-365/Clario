@@ -1,5 +1,3 @@
-// lib/screens/empty_chair_setup_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -12,13 +10,35 @@ class EmptyChairSetupScreen extends StatefulWidget {
   State<EmptyChairSetupScreen> createState() => _EmptyChairSetupScreenState();
 }
 
-class _EmptyChairSetupScreenState extends State<EmptyChairSetupScreen> {
+class _EmptyChairSetupScreenState extends State<EmptyChairSetupScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _nameController = TextEditingController();
   final FocusNode _nameFocusNode = FocusNode();
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    _animationController.forward();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FocusScope.of(context).requestFocus(_nameFocusNode);
     });
@@ -26,6 +46,7 @@ class _EmptyChairSetupScreenState extends State<EmptyChairSetupScreen> {
 
   @override
   void dispose() {
+    _animationController.dispose();
     _nameController.dispose();
     _nameFocusNode.dispose();
     super.dispose();
@@ -33,13 +54,10 @@ class _EmptyChairSetupScreenState extends State<EmptyChairSetupScreen> {
 
   void _startSession() {
     if (_nameController.text.isNotEmpty) {
-      // Save the selected chair member for future reference
       final userDataProvider =
           Provider.of<UserDataProvider>(context, listen: false);
       userDataProvider.addEmptyChairMember(_nameController.text);
-
-      // Navigate to the conversation screen with the name
-      context.go('/empty-chair/session', extra: _nameController.text);
+      context.go('/home/empty-chair-session/${_nameController.text}');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a name or role.')),
@@ -50,6 +68,7 @@ class _EmptyChairSetupScreenState extends State<EmptyChairSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -58,61 +77,106 @@ class _EmptyChairSetupScreenState extends State<EmptyChairSetupScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
-              Color(0xFF0C1324),
-              Color(0xFF131A2D),
+              Color(0xFF141E30),
+              Color(0xFF243B55),
             ],
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(),
-              Text(
-                "Who is on the empty chair today?",
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 30),
-              TextField(
-                controller: _nameController,
-                focusNode: _nameFocusNode,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Name or role',
-                  labelStyle: TextStyle(color: Colors.grey[500]),
-                  filled: true,
-                  fillColor: Colors.white.withOpacity(0.1),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _startSession,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
+            child: Column(
+              children: [
+                const Spacer(),
+                // Headline
+                SlideTransition(
+                  position: _slideAnimation,
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Text(
+                      "Who is on the\nEmpty Chair today?",
+                      textAlign: TextAlign.center,
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 30,
+                                letterSpacing: 1.2,
+                                height: 1.3,
+                              ),
                     ),
                   ),
-                  child: const Text('Start Conversation'),
                 ),
-              ),
-            ],
+                const SizedBox(height: 40),
+
+                // Input field
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: TextField(
+                    controller: _nameController,
+                    focusNode: _nameFocusNode,
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.person_outline,
+                          color: Colors.white70),
+                      labelText: 'Enter name or role',
+                      labelStyle: const TextStyle(color: Colors.white70),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.08),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: Colors.white24),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                            color: Colors.blueAccent.shade100, width: 2),
+                      ),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+
+                // Start button
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: GestureDetector(
+                    onTap: _startSession,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Text(
+                          "Start Conversation",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+              ],
+            ),
           ),
         ),
       ),
