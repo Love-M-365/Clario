@@ -45,7 +45,7 @@ class DefaultFirebaseOptions {
       apiKey: "AIzaSyDXeQ-_zSx9eZhv6LJrOnWoZ86gPt7Nf4A",
       authDomain: "clario-f60b0.firebaseapp.com",
       projectId: "clario-f60b0",
-      storageBucket: "clario-f60b0.firebasestorage.app",
+      storageBucket: "clario-f60b0.appspot.com",
       messagingSenderId: "1045577266956",
       appId: "1:1045577266956:web:db333d7530a920e52c3b29",
       databaseURL: 'https://clario-f60b0-default-rtdb.firebaseio.com/',

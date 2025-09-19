@@ -1,10 +1,77 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:go_router/go_router.dart';
-import '../../providers/auth_provider.dart';
-// import 'register_screen.dart'; // This is now handled by the router
-// import '../home/home_screen.dart'; // This is now handled by the router
 
+import '../../providers/auth_provider.dart' as my_auth;
+
+// ---------------- AUTH SERVICE ----------------
+class AuthService {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+  Future<User?> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential =
+          await _auth.signInWithCredential(credential);
+
+      return userCredential.user;
+    } catch (e) {
+      print('Google Sign-In Error: $e');
+      return null;
+    }
+  }
+
+  Future<void> signOut() async {
+    await _auth.signOut();
+    await _googleSignIn.signOut();
+  }
+}
+
+// ---------------- GOOGLE BUTTON ----------------
+class SquareTile extends StatelessWidget {
+  final String imagePath;
+  final VoidCallback onTap;
+
+  const SquareTile({
+    super.key,
+    required this.imagePath,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.white),
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.grey[200],
+        ),
+        child: Image.asset(
+          imagePath,
+          height: 40,
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------- LOGIN SCREEN ----------------
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -26,33 +93,32 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (_formKey.currentState!.validate()) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  if (_formKey.currentState!.validate()) {
+    // use alias for your custom AuthProvider
+    final authProvider = Provider.of<my_auth.AuthProvider>(context, listen: false);
 
-      final success = await authProvider.signInWithEmailAndPassword(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+    final success = await authProvider.signInWithEmailAndPassword(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
 
-      if (success && mounted) {
-        // Use GoRouter for navigation
-        context.go('/home');
-      }
+    if (success && mounted) {
+      context.go('/home');
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        // Set the background gradient to match the image
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF0C1324), // Dark blue from your image
-              Color(0xFF131A2D), // Slightly lighter dark blue from your image
+              Color(0xFF0C1324),
+              Color(0xFF131A2D),
             ],
           ),
         ),
@@ -72,10 +138,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // --- Add your logo here ---
+                        // Logo
                         Container(
-                          width: 100, // Adjust size as needed
-                          height: 100, // Adjust size as needed
+                          width: 100,
+                          height: 100,
                           decoration: BoxDecoration(
                             color: Colors.transparent,
                             borderRadius: BorderRadius.circular(20),
@@ -90,12 +156,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
                             child: Image.asset(
-                              'assets/images/clario_logo_bg.jpeg', // Your logo path
+                              'assets/images/clario_logo_bg.jpeg',
                               fit: BoxFit.contain,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 30), // Spacing below logo
+                        const SizedBox(height: 30),
                         Text(
                           'Welcome Back',
                           style: Theme.of(context)
@@ -103,17 +169,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               .headlineMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: Colors
-                                    .black87, // Adjust text color for contrast
+                                color: Colors.black87,
                               ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Sign in to continue your mental health journey',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(color: Colors.grey[600]),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 40),
@@ -163,43 +228,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                         ),
                         const SizedBox(height: 30),
-                        Consumer<AuthProvider>(
-                          builder: (context, authProvider, child) {
-                            if (authProvider.errorMessage != null) {
-                              return Column(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      authProvider.errorMessage!,
-                                      style: const TextStyle(color: Colors.red),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                ],
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          },
-                        ),
                         SizedBox(
                           width: double.infinity,
-                          child: Consumer<AuthProvider>(
-                            builder: (context, authProvider, child) {
-                              return ElevatedButton(
-                                onPressed:
-                                    authProvider.isLoading ? null : _login,
-                                child: authProvider.isLoading
-                                    ? const CircularProgressIndicator(
-                                        color: Colors.white)
-                                    : const Text('Sign In'),
-                              );
-                            },
+                          child: ElevatedButton(
+                            onPressed: _login,
+                            child: const Text('Sign In'),
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -212,10 +245,57 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             TextButton(
                               onPressed: () {
-                                // Use GoRouter for navigation
                                 context.go('/register');
                               },
                               child: const Text('Sign Up'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 25.0),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Divider(
+                                  thickness: 0.5,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                child: Text(
+                                  'Or continue with',
+                                  style: TextStyle(color: Colors.grey.shade700),
+                                ),
+                              ),
+                              Expanded(
+                                child: Divider(
+                                  thickness: 0.5,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SquareTile(
+                              onTap: () async {
+                                final user = await AuthService().signInWithGoogle();
+                                if (user != null) {
+                                  context.go('/home');
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Google Sign-In failed"),
+                                    ),
+                                  );
+                                }
+                              },
+                              imagePath: 'assets/images/google_logo.png',
                             ),
                           ],
                         ),

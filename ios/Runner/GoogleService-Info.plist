@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>1045577266956-4sbh1ve2cl50atu3gj6l380ooaql8p9m.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.1045577266956-4sbh1ve2cl50atu3gj6l380ooaql8p9m</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>1045577266956-ah2sqjjica4j916uadc0p81rupefruae.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyBhDF_PrWdWl__HXtPq9MRwM1ygW6tCzmg</string>
+	<key>GCM_SENDER_ID</key>
+	<string>1045577266956</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.clario</string>
+	<key>PROJECT_ID</key>
+	<string>clario-f60b0</string>
+	<key>STORAGE_BUCKET</key>
+	<string>clario-f60b0.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:1045577266956:ios:5dce69d82443577e2c3b29</string>
+	<key>DATABASE_URL</key>
+	<string>https://clario-f60b0-default-rtdb.firebaseio.com</string>
+</dict>
+</plist>
