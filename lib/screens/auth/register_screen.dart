@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../questionnaire/questionnaire_screen.dart';
-import '../auth/verify_email_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -43,26 +41,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'registrationCompleted': false,
       };
 
-      // Show a loading indicator during registration
       authProvider.setLoading(true);
 
-      final success = await authProvider.createUserWithEmailAndPassword(
+      // Use correct AuthProvider method
+      final success = await authProvider.registerWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text,
         userData,
       );
 
-      // Stop loading indicator
       authProvider.setLoading(false);
 
       if (success && mounted) {
-        final user = Provider.of<AuthProvider>(context, listen: false).user;
+        final user = authProvider.user;
 
         if (user != null && !user.emailVerified) {
-          // Redirect to the verify email screen
           context.go('/verify-email');
         } else {
-          // Redirect to the questionnaire if email is already verified
           context.go('/questionnaire');
         }
       }
@@ -73,14 +68,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        // Set the background gradient to match the image
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF0C1324), // Dark blue from your image
-              Color(0xFF131A2D), // Slightly lighter dark blue from your image
+              Color(0xFF0C1324),
+              Color(0xFF131A2D),
             ],
           ),
         ),
@@ -100,10 +94,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // --- Add your logo here ---
+                        // Logo
                         Container(
-                          width: 100, // Adjust size as needed
-                          height: 100, // Adjust size as needed
+                          width: 100,
+                          height: 100,
                           decoration: BoxDecoration(
                             color: Colors.transparent,
                             borderRadius: BorderRadius.circular(20),
@@ -118,12 +112,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
                             child: Image.asset(
-                              'assets/images/clario_logo_bg.jpeg', // Your logo path
+                              'assets/images/clario_logo_bg.jpeg',
                               fit: BoxFit.contain,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 30), // Spacing below logo
+                        const SizedBox(height: 30),
                         Text(
                           'Create Account',
                           style: Theme.of(context)
@@ -257,6 +251,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           },
                         ),
                         const SizedBox(height: 30),
+
+                        // Display error if any
                         Consumer<AuthProvider>(
                           builder: (context, authProvider, child) {
                             if (authProvider.errorMessage != null) {
@@ -281,6 +277,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             return const SizedBox.shrink();
                           },
                         ),
+
+                        // Create Account Button
                         SizedBox(
                           width: double.infinity,
                           child: Consumer<AuthProvider>(
@@ -297,6 +295,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
+
+                        // Google Sign-Up Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black87,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 5,
+                            ),
+                            icon: Image.asset(
+                              'assets/images/google_logo.png',
+                              height: 24,
+                              width: 24,
+                            ),
+                            label: const Text(
+                              'Sign up with Google',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            onPressed: () async {
+                              final authProvider = Provider.of<AuthProvider>(
+                                  context,
+                                  listen: false);
+                              authProvider.setLoading(true);
+                              final success =
+                                  await authProvider.signInWithGoogle();
+                              authProvider.setLoading(false);
+
+                              if (success && mounted) {
+                                context.go('/questionnaire');
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Already have account
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

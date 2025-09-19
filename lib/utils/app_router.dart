@@ -14,6 +14,8 @@ import '../screens/questionnaire/questionnaire_screen.dart';
 import '../screens/empty_chair_intro_screen.dart';
 import '../screens/empty_chair_session_screen.dart';
 import '../screens/empty_chair_setup_screen.dart';
+import '../screens/home/NotificationPanelScreen.dart';
+import '../screens/settings_screen.dart';
 
 final GoRouter _router = GoRouter(
   initialLocation: '/',
@@ -69,6 +71,16 @@ final GoRouter _router = GoRouter(
           builder: (context, state) => EmptyChairSessionScreen(
             chairMemberName: state.pathParameters['name']!,
           ),
+        ),
+        GoRoute(
+          path: 'notifications',
+          name: 'notifications',
+          builder: (context, state) => const NotificationPanelScreen(),
+        ),
+        GoRoute(
+          path: 'settings',
+          name: 'settings',
+          builder: (context, state) => const SettingsScreen(),
         ),
       ],
     ),

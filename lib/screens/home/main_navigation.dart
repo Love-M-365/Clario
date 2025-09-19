@@ -1,5 +1,3 @@
-// lib/screens/main_navigation.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
@@ -9,6 +7,7 @@ import '../settings_screen.dart';
 import '../empty_chair_intro_screen.dart'; // New screen for Empty Chair mode
 import '../../enum/app_theme_type.dart';
 import '../../utils/theme_data.dart';
+import '../journal_history_screen.dart'; // Import the new journal screen
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -22,14 +21,15 @@ class _MainNavigationState extends State<MainNavigation> {
 
   final List<Widget> _screens = [
     const MainDashboardScreen(),
+    const EmptyChairIntroScreen(),
     const SleepScreen(),
-    const EmptyChairIntroScreen(), // Add the new screen
-    const SettingsScreen(),
+    const JournalHistoryScreen(), // New journal screen at index 2
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       body: _screens[_currentIndex],
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _currentIndex,
@@ -66,7 +66,7 @@ class CustomBottomNavBar extends StatelessWidget {
     return Container(
       height: 80,
       decoration: BoxDecoration(
-        color: navBarColor,
+        color: Colors.black,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(25),
           topRight: Radius.circular(25),
@@ -77,12 +77,14 @@ class CustomBottomNavBar extends StatelessWidget {
         children: [
           _buildNavItem(context, Icons.home_outlined, 0, unselectedIconColor,
               selectedIconColor),
-          _buildNavItem(
-              context, Icons.search, 1, unselectedIconColor, selectedIconColor),
-          _buildNavItem(context, Icons.favorite_border, 2, unselectedIconColor,
+          _buildNavItem(context, Icons.chair_outlined, 3, unselectedIconColor,
               selectedIconColor),
-          _buildNavItem(context, Icons.person_outline, 3, unselectedIconColor,
-              selectedIconColor),
+          _buildNavItem(context, Icons.history_edu_outlined, 2,
+              unselectedIconColor, selectedIconColor),
+          _buildNavItem(context, Icons.bedtime_outlined, 1, unselectedIconColor,
+              selectedIconColor), // New Journal/History icon
+          // Now at index 3
+          // Now at index 4
         ],
       ),
     );

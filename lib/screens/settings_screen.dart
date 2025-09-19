@@ -14,9 +14,25 @@ class SettingsScreen extends StatelessWidget {
     return Consumer2<AuthProvider, ThemeProvider>(
       builder: (context, authProvider, themeProvider, child) {
         return Scaffold(
+          extendBodyBehindAppBar: true, // This is the key fix
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+              onPressed: () => context.go('/home'),
+            ),
+          ),
           body: Container(
-            decoration: BoxDecoration(
-              gradient: themeProvider.getGradient(themeProvider.currentTheme),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF0C1324), // Dark blue
+                  Color(0xFF131A2D), // Slightly lighter dark blue
+                ],
+              ),
             ),
             child: SafeArea(
               child: SingleChildScrollView(
@@ -47,15 +63,12 @@ class SettingsScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.white.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.1),
+                          width: 1.0,
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -84,14 +97,14 @@ class SettingsScreen extends StatelessWidget {
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
+                                    color: Colors.white,
                                   ),
                                 ),
                                 Text(
                                   authProvider.user?.email ?? '',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey.shade600,
+                                    color: Colors.grey.shade400,
                                   ),
                                 ),
                               ],
@@ -115,118 +128,15 @@ class SettingsScreen extends StatelessWidget {
                           curve: Curves.easeOut,
                         ),
                     const SizedBox(height: 24),
-                    // Color Therapy Section
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Color Therapy',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Choose a color theme that matches your mood',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children:
-                                themeProvider.availableThemes.map((theme) {
-                              final isSelected =
-                                  themeProvider.currentTheme == theme['type'];
-                              return GestureDetector(
-                                onTap: () =>
-                                    themeProvider.setTheme(theme['type']),
-                                child: Container(
-                                  width: 80,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    gradient:
-                                        theme['gradient'] as LinearGradient,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? Colors.black
-                                          : Colors.transparent,
-                                      width: 3,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: (theme['gradient']
-                                                as LinearGradient)
-                                            .colors[0]
-                                            .withOpacity(0.3),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 5),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      if (isSelected)
-                                        const Icon(
-                                          Icons.check,
-                                          color: Colors.white,
-                                          size: 20,
-                                        ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        (theme['title'] as String)
-                                            .split(' ')[0],
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ).animate().fadeIn(
-                          duration: 800.ms,
-                          delay: 400.ms,
-                        ),
-                    const SizedBox(height: 24),
                     // Settings Options
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.white.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.1),
+                          width: 1.0,
+                        ),
                       ),
                       child: Column(
                         children: [
@@ -295,7 +205,7 @@ class SettingsScreen extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Row(
             children: [
               Container(
@@ -303,12 +213,12 @@ class SettingsScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isDestructive
                       ? Colors.red.withOpacity(0.1)
-                      : Colors.grey.withOpacity(0.1),
+                      : Colors.white.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   icon,
-                  color: isDestructive ? Colors.red : Colors.grey.shade600,
+                  color: isDestructive ? Colors.red : Colors.grey.shade400,
                   size: 20,
                 ),
               ),
@@ -322,14 +232,14 @@ class SettingsScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: isDestructive ? Colors.red : Colors.black87,
+                        color: isDestructive ? Colors.red : Colors.white,
                       ),
                     ),
                     Text(
                       subtitle,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade600,
+                        color: Colors.grey.shade500,
                       ),
                     ),
                   ],
@@ -350,7 +260,7 @@ class SettingsScreen extends StatelessWidget {
     return Container(
       height: 1,
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      color: Colors.grey.shade200,
+      color: Colors.white.withOpacity(0.1),
     );
   }
 

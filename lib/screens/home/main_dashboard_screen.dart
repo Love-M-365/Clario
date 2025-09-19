@@ -4,6 +4,7 @@ import '../../providers/user_data_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/theme_data.dart';
+import 'package:go_router/go_router.dart';
 
 class MainDashboardScreen extends StatefulWidget {
   const MainDashboardScreen({super.key});
@@ -46,6 +47,30 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true, // This is the key fix
+      backgroundColor: Colors.transparent, // And this one
+      appBar: AppBar(
+        backgroundColor: Colors.transparent, // Keep this transparent
+        elevation: 0,
+        title: const Text('CLARIO',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.notifications_none_outlined,
+              color: Colors.white),
+          onPressed: () {
+            context.go('/home/notifications');
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: Colors.white),
+            onPressed: () {
+              context.go('/home/settings');
+            },
+          ),
+        ],
+      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -104,13 +129,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                       ),
                 ),
               ],
-            ),
-            IconButton(
-              onPressed: () {
-                authProvider.signOut();
-              },
-              icon: const Icon(Icons.logout),
-              color: Colors.white,
             ),
           ],
         );
@@ -383,56 +401,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
         title: const Text('AI Chat'),
         content: const Text(
             'AI chat feature will be integrated with your Google AI Cloud services.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEmptyChairDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Empty Chair Therapy'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Empty Chair Therapy is a powerful technique where you:'),
-            SizedBox(height: 10),
-            Text('1. Imagine someone sitting in an empty chair'),
-            Text('2. Express your feelings to them'),
-            Text('3. Switch perspectives and respond as them'),
-            Text('4. Continue the dialogue for healing'),
-            SizedBox(height: 10),
-            Text('This helps process emotions and improve relationships.'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Start Session'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSleepAnalysisDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sleep Analysis'),
-        content: const Text(
-            'Sleep tracking and analysis features will help you monitor your sleep patterns and provide personalized recommendations.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

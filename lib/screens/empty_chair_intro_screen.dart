@@ -14,7 +14,7 @@ class _EmptyChairIntroScreenState extends State<EmptyChairIntroScreen>
   late AnimationController _mainAnimationController;
   late Animation<Offset> _textSlideAnimation;
   late Animation<double> _lottieScaleAnimation;
-  late Animation<double> _imageFadeAnimation;
+  // late Animation<double> _imageFadeAnimation; // Removed
   late Animation<double> _buttonScaleAnimation;
 
   @override
@@ -42,12 +42,12 @@ class _EmptyChairIntroScreenState extends State<EmptyChairIntroScreen>
       curve: const Interval(0.0, 0.7, curve: Curves.elasticOut),
     ));
 
-    _imageFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _mainAnimationController,
-        curve: const Interval(0.4, 1.0, curve: Curves.easeIn),
-      ),
-    );
+    // _imageFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    //   CurvedAnimation(
+    //     parent: _mainAnimationController,
+    //     curve: const Interval(0.4, 1.0, curve: Curves.easeIn),
+    //   ),
+    // ); // Removed
 
     _buttonScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -159,35 +159,7 @@ class _EmptyChairIntroScreenState extends State<EmptyChairIntroScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 50),
-
-                    // Card Image Section
-                    FadeTransition(
-                      opacity: _imageFadeAnimation,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Image.asset(
-                            'assets/images/empty_chairs.jpeg',
-                            width: double.infinity,
-                            height: 200,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 100),
+                    const SizedBox(height: 100), // Adjusted spacing
                   ],
                 ),
               ),
