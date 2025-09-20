@@ -93,20 +93,28 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-  if (_formKey.currentState!.validate()) {
-    // use alias for your custom AuthProvider
-    final authProvider = Provider.of<my_auth.AuthProvider>(context, listen: false);
+    if (_formKey.currentState!.validate()) {
+      // use alias for your custom AuthProvider
+      final authProvider =
+          Provider.of<my_auth.AuthProvider>(context, listen: false);
 
-    final success = await authProvider.signInWithEmailAndPassword(
-      _emailController.text.trim(),
-      _passwordController.text,
-    );
+      final success = await authProvider.signInWithEmailAndPassword(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
 
-    if (success && mounted) {
-      context.go('/home');
+      if (success && mounted) {
+        User? user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          String idToken = await user.getIdToken() ?? '';
+          print(
+              "Firebase ID Token: $idToken"); // <-- use this for Postman or requests
+        }
+
+        context.go('/home');
+      }
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -263,7 +271,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 10),
                                 child: Text(
                                   'Or continue with',
                                   style: TextStyle(color: Colors.grey.shade700),
@@ -284,7 +293,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           children: [
                             SquareTile(
                               onTap: () async {
-                                final user = await AuthService().signInWithGoogle();
+                                final user =
+                                    await AuthService().signInWithGoogle();
                                 if (user != null) {
                                   context.go('/home');
                                 } else {

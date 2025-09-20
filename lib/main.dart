@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
-import 'providers/auth_provider.dart';
+import 'providers/auth_provider.dart'; // This is your local AuthProvider
 import 'providers/theme_provider.dart';
 import 'providers/user_data_provider.dart';
-import 'utils/app_router.dart'; // Import the new router file
+import 'utils/app_router.dart';
 import 'utils/theme_data.dart';
+import 'package:firebase_auth/firebase_auth.dart'
+    as firebase_auth; // Alias the Firebase import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +33,9 @@ class ClarionApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(
+            create: (_) =>
+                AuthProvider()), // Now Dart knows this is your local AuthProvider
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => UserDataProvider()),
       ],
@@ -41,7 +45,7 @@ class ClarionApp extends StatelessWidget {
             title: 'Clario',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.getTheme(themeProvider.currentTheme),
-            routerConfig: appRouter, // Use the GoRouter here
+            routerConfig: appRouter,
           );
         },
       ),

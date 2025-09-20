@@ -5,6 +5,7 @@ import '../../providers/theme_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/theme_data.dart';
 import 'package:go_router/go_router.dart';
+import '../home/ai_chat_screen.dart';
 
 class MainDashboardScreen extends StatefulWidget {
   const MainDashboardScreen({super.key});
@@ -395,19 +396,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
   }
 
   void _showAIChatDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('AI Chat'),
-        content: const Text(
-            'AI chat feature will be integrated with your Google AI Cloud services.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AIChatScreen()),
     );
   }
 }
