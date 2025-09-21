@@ -60,6 +60,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.palette,
       color: const Color(0xFFFF9F43),
     ),
+    // ✅ New Empty Chair feature page
+    OnboardingPage(
+      title: 'Empty Chair Sessions',
+      description:
+          'Talk to your thoughts and emotions in a safe space. The Empty Chair feature helps you express and heal.',
+      icon: Icons.chair_alt,
+      color: const Color(0xFF2E86AB),
+    ),
   ];
 
   @override

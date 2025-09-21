@@ -49,8 +49,13 @@ class UserDataProvider with ChangeNotifier {
         _dailyReflections = reflectionsMap.entries.map((entry) {
           return {"id": entry.key, ...Map<String, dynamic>.from(entry.value)};
         }).toList()
-          ..sort(
-              (a, b) => (b["timestamp"] ?? "").compareTo(a["timestamp"] ?? ""));
+          ..sort((a, b) {
+            final aTime =
+                DateTime.tryParse(a["timestamp"] ?? "") ?? DateTime(1970);
+            final bTime =
+                DateTime.tryParse(b["timestamp"] ?? "") ?? DateTime(1970);
+            return bTime.compareTo(aTime);
+          });
       }
 
       await _loadCurrentMoodData();
@@ -119,8 +124,11 @@ class UserDataProvider with ChangeNotifier {
     if (user == null) return;
 
     try {
+      // Generate a new push key under user's reflections
       final reflectionRef =
           _dbRef.child("users/${user.uid}/reflections").push();
+
+      // Set the reflection data
       await reflectionRef.set({
         'text': text,
         'type': type,
@@ -128,7 +136,8 @@ class UserDataProvider with ChangeNotifier {
         'mood_score': _calculateMoodScore(text),
       });
 
-      await loadUserData(); // Refresh to update the UI
+      // Refresh local state
+      await loadUserData(); // This reloads the latest reflections
     } catch (e) {
       print('Error saving reflection: $e');
     }
