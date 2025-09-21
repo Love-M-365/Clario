@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
-import '../../providers/user_data_provider.dart';
+import '../../services/ai_service.dart';
 
 class EmptyChairSessionScreen extends StatefulWidget {
   final String chairMemberName;
-
   const EmptyChairSessionScreen({super.key, required this.chairMemberName});
 
   @override
@@ -19,18 +15,57 @@ class _EmptyChairSessionScreenState extends State<EmptyChairSessionScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
-  bool _isUserTurn = true;
-  bool _isSaving = false;
+
+  final AIService _aiService = AIService();
+  String? _sessionId;
+  bool _isLoading = false;
+
+  // 🔹 Always BLUE or RED (never "user"/"chair")
+  String _currentPerspective = 'BLUE';
 
   @override
   void initState() {
     super.initState();
-    _addMessage(
-      sender: 'AI',
-      text:
-          "Hello. I am ${widget.chairMemberName}. What do you want to talk about today and what do you hope to achieve?",
-      isUser: false,
-    );
+    _startIntroSession();
+  }
+
+  // 1️⃣ AI Introduction before starting session
+  Future<void> _startIntroSession() async {
+    setState(() => _isLoading = true);
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? 'demoUser';
+
+    try {
+      final response = await _aiService.startSession(
+        userId,
+        personInChair: widget.chairMemberName,
+        userGoal: "Explore your thoughts",
+      );
+
+      _sessionId = response['sessionId'];
+
+      _addMessage(
+        sender: widget.chairMemberName,
+        text:
+            "Hello! I am ${widget.chairMemberName}. Today I will guide you through this session. Answer my questions honestly, and I will help you reflect and explore your thoughts.",
+        isUser: false,
+      );
+
+      // Add first AI question
+      _addMessage(
+        sender: widget.chairMemberName,
+        text: response['initialAiMessage'] ??
+            "Let's start. What do you want to talk about today?",
+        isUser: false,
+      );
+    } catch (e) {
+      _addMessage(
+        sender: widget.chairMemberName,
+        text: "Error starting session: $e",
+        isUser: false,
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   void _addMessage(
@@ -54,138 +89,63 @@ class _EmptyChairSessionScreenState extends State<EmptyChairSessionScreen> {
     });
   }
 
-  void _handleSubmitted(String text) {
-    if (text.isNotEmpty && !_isSaving) {
-      _addMessage(
-        sender: _isUserTurn ? 'You' : widget.chairMemberName,
-        text: text,
-        isUser: _isUserTurn,
-      );
-      _textController.clear();
+  // 2️⃣ Handle user input and AI follow-ups
+  Future<void> _handleSubmitted(String text) async {
+    if (text.isEmpty || _isLoading) return;
 
-      setState(() {
-        _isUserTurn = !_isUserTurn; // Toggle turn
-      });
-    }
-  }
-
-  Future<void> _saveConversation() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    setState(() => _isSaving = true);
-
-    try {
-      final databaseReference = FirebaseDatabase.instance
-          .ref('users/${user.uid}/emptyChairConversations')
-          .push();
-      final chatData = _messages
-          .map((m) => {
-                'sender': m.sender,
-                'text': m.text,
-                'isUser': m.isUser,
-                'timestamp': m.timestamp.toIso8601String(),
-              })
-          .toList();
-
-      await databaseReference.set({
-        'chairMemberName': widget.chairMemberName,
-        'conversation': chatData,
-        'endedAt': DateTime.now().toIso8601String(),
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Conversation saved successfully!')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving conversation: $e')),
-      );
-    } finally {
-      setState(() => _isSaving = false);
-    }
-  }
-
-  void _endSession() async {
-    final shouldEnd = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('End Session?'),
-        content: const Text(
-            'Are you sure you want to end and save this conversation?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('End & Save'),
-          ),
-        ],
-      ),
+    final isUserPerspective = _currentPerspective == 'BLUE';
+    _addMessage(
+      sender: isUserPerspective ? 'You' : widget.chairMemberName,
+      text: text,
+      isUser: isUserPerspective,
     );
 
-    if (shouldEnd == true) {
-      await _saveConversation();
-      if (mounted) {
-        context.go('/home');
+    _textController.clear();
+    setState(() => _isLoading = true);
+
+    if (_sessionId != null) {
+      try {
+        final userId = FirebaseAuth.instance.currentUser?.uid ?? 'demoUser';
+
+        final aiResponse = await _aiService.processMessage(
+          userId,
+          _sessionId!,
+          text,
+          _currentPerspective, // always BLUE or RED
+        );
+
+        // 3️⃣ AI automatically generates follow-up question
+        final aiText = aiResponse['aiMessage'] ??
+            "I have another question for you: How does that make you feel?";
+
+        _addMessage(
+          sender: isUserPerspective ? widget.chairMemberName : 'You',
+          text: aiText,
+          isUser: !isUserPerspective,
+        );
+
+        // 🔄 Toggle perspective after every exchange
+        _currentPerspective = _currentPerspective == 'BLUE' ? 'RED' : 'BLUE';
+      } catch (e) {
+        _addMessage(
+          sender: widget.chairMemberName,
+          text: "Error getting AI response: $e",
+          isUser: false,
+        );
+      } finally {
+        setState(() => _isLoading = false);
       }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Text(
-          'Talking with ${widget.chairMemberName}',
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF141E30), Color(0xFF243B55)],
-          ),
-        ),
-        child: Column(
-          children: [
-            // Messages
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0, vertical: 24.0),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final message = _messages[index];
-                  return _buildMessageBubble(message);
-                },
-              ),
-            ),
-            // Input
-            _buildChatInput(),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _endSession,
-        backgroundColor: Colors.redAccent,
-        icon: const Icon(Icons.stop),
-        label: const Text("End Session"),
-      ),
-    );
+  void _togglePerspective() {
+    setState(() {
+      _currentPerspective = _currentPerspective == 'BLUE' ? 'RED' : 'BLUE';
+    });
   }
 
   Widget _buildMessageBubble(ChatMessage message) {
     final isUser = message.isUser;
-
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: AnimatedContainer(
@@ -198,52 +158,35 @@ class _EmptyChairSessionScreenState extends State<EmptyChairSessionScreen> {
         decoration: BoxDecoration(
           gradient: isUser
               ? const LinearGradient(
-                  colors: [Color(0xFF4facfe), Color(0xFF00f2fe)],
-                )
-              : LinearGradient(
-                  colors: [
-                    Colors.white.withOpacity(0.2),
-                    Colors.white.withOpacity(0.05),
-                  ],
-                ),
+                  colors: [Color(0xFF4facfe), Color(0xFF00f2fe)])
+              : const LinearGradient(
+                  colors: [Color(0xFFff6a6a), Color(0xFFff3b3b)]),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(18),
             topRight: const Radius.circular(18),
             bottomLeft: Radius.circular(isUser ? 18 : 4),
             bottomRight: Radius.circular(isUser ? 4 : 18),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 6,
-              offset: const Offset(2, 4),
-            ),
-          ],
         ),
         child: Text(
           message.text,
-          style: TextStyle(
-            color: isUser ? Colors.white : Colors.white70,
-            fontSize: 16,
-          ),
+          style: const TextStyle(color: Colors.white, fontSize: 16),
         ),
       ),
     );
   }
 
   Widget _buildChatInput() {
-    final hintText = _isUserTurn
-        ? 'Speak as yourself...'
-        : 'Speak as ${widget.chairMemberName}...';
+    final hintText = _currentPerspective == 'BLUE'
+        ? 'Type as yourself...'
+        : 'Type as ${widget.chairMemberName}...';
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.3),
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
+            topLeft: Radius.circular(20), topRight: Radius.circular(20)),
       ),
       child: Row(
         children: [
@@ -266,10 +209,14 @@ class _EmptyChairSessionScreenState extends State<EmptyChairSessionScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.swap_horiz, color: Colors.white),
+            onPressed: _togglePerspective,
+          ),
           InkWell(
-            onTap:
-                _isSaving ? null : () => _handleSubmitted(_textController.text),
+            onTap: _isLoading
+                ? null
+                : () => _handleSubmitted(_textController.text),
             borderRadius: BorderRadius.circular(30),
             child: CircleAvatar(
               backgroundColor: Theme.of(context).colorScheme.primary,
@@ -278,6 +225,46 @@ class _EmptyChairSessionScreenState extends State<EmptyChairSessionScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: Text('Talking with ${widget.chairMemberName}',
+            style: const TextStyle(color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF141E30), Color(0xFF243B55)],
+          ),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 24.0),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  return _buildMessageBubble(_messages[index]);
+                },
+              ),
+            ),
+            if (_isLoading) const LinearProgressIndicator(),
+            _buildChatInput(),
+          ],
+        ),
       ),
     );
   }

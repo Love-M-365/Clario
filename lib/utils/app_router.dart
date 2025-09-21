@@ -12,8 +12,10 @@ import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/auth/verify_email_screen.dart';
 import '../screens/questionnaire/questionnaire_screen.dart';
 import '../screens/empty_chair_intro_screen.dart';
-import '../screens/empty_chair_session_screen.dart';
-import '../screens/empty_chair_setup_screen.dart';
+
+import '../screens/EmptyChair/chatbot_screen.dart';
+import '../screens/EmptyChair/empty_chair_screen.dart';
+import '../screens/EmptyChair/summary_screen.dart';
 import '../screens/home/NotificationPanelScreen.dart';
 import '../screens/settings_screen.dart';
 
@@ -61,16 +63,16 @@ final GoRouter _router = GoRouter(
           builder: (context, state) => const EmptyChairIntroScreen(),
         ),
         GoRoute(
-          path: 'empty-chair-setup',
-          name: 'empty_chair_setup',
-          builder: (context, state) => const EmptyChairSetupScreen(),
+          path: '/chatbot',
+          builder: (context, state) => const ChatbotScreen(),
         ),
         GoRoute(
-          path: 'empty-chair-session/:name',
-          name: 'empty_chair_session',
-          builder: (context, state) => EmptyChairSessionScreen(
-            chairMemberName: state.pathParameters['name']!,
-          ),
+          path: '/emptyChair',
+          builder: (context, state) => const EmptyChairScreen(),
+        ),
+        GoRoute(
+          path: '/summary',
+          builder: (context, state) => const SummaryScreen(),
         ),
         GoRoute(
           path: 'notifications',

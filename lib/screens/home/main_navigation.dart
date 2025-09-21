@@ -77,11 +77,11 @@ class CustomBottomNavBar extends StatelessWidget {
         children: [
           _buildNavItem(context, Icons.home_outlined, 0, unselectedIconColor,
               selectedIconColor),
-          _buildNavItem(context, Icons.chair_outlined, 3, unselectedIconColor,
+          _buildNavItem(context, Icons.chair_outlined, 1, unselectedIconColor,
               selectedIconColor),
-          _buildNavItem(context, Icons.history_edu_outlined, 2,
+          _buildNavItem(context, Icons.history_edu_outlined, 3,
               unselectedIconColor, selectedIconColor),
-          _buildNavItem(context, Icons.bedtime_outlined, 1, unselectedIconColor,
+          _buildNavItem(context, Icons.bedtime_outlined, 2, unselectedIconColor,
               selectedIconColor), // New Journal/History icon
           // Now at index 3
           // Now at index 4

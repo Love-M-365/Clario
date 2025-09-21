@@ -172,7 +172,7 @@ class _EmptyChairIntroScreenState extends State<EmptyChairIntroScreen>
                 child: ScaleTransition(
                   scale: _buttonScaleAnimation,
                   child: GestureDetector(
-                    onTap: () => context.go('/home/empty-chair-setup'),
+                    onTap: () => context.go('/home/chatbot'),
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       decoration: BoxDecoration(

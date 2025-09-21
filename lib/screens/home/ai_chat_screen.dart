@@ -106,6 +106,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20,
+            color: Colors.white,
           ),
         ),
         centerTitle: true,
