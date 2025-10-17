@@ -4,13 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import '../auth/login_screen.dart';
 
-// Extension to mix a color with another color (e.g., black)
-extension MixColor on Color {
-  Color mixWith(Color color, [double amount = 0.5]) {
-    return Color.lerp(this, color, amount)!;
-  }
+// A data class for a single onboarding page
+class OnboardingPage {
+  final String title;
+  final String description;
+  final String imagePath; // Changed from IconData to use illustrations
+  final Color color;
+
+  OnboardingPage({
+    required this.title,
+    required this.description,
+    required this.imagePath,
+    required this.color,
+  });
 }
 
 class OnboardingScreen extends StatefulWidget {
@@ -24,154 +31,105 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
+  // --- Onboarding Content ---
+  // 🚨 ACTION REQUIRED: Replace image paths with your actual asset illustrations
   final List<OnboardingPage> _pages = [
     OnboardingPage(
       title: 'Welcome to Clario',
       description:
-          'Your personal AI-powered mental health companion designed specifically for youth.',
-      icon: Icons.psychology,
+          'Your personal AI-powered mental health companion, designed for you.',
+      imagePath: 'assets/images/onboarding_welcome.jpg', // Example path
       color: const Color(0xFF6B73FF),
     ),
     OnboardingPage(
       title: 'AI Therapy Sessions',
       description:
-          'Experience personalized therapy sessions with our advanced AI that understands your unique needs.',
-      icon: Icons.chat_bubble_outline,
+          'Experience personalized sessions with our advanced AI that understands your needs.',
+      imagePath: 'assets/images/onboarding_chat.jpg', // Example path
       color: const Color(0xFF4ECDC4),
     ),
     OnboardingPage(
-      title: 'Mood Tracking',
+      title: 'Track Your Mood',
       description:
-          'Track your daily emotions and see patterns in your mental health journey.',
-      icon: Icons.favorite,
+          'Log your daily emotions to discover patterns in your mental wellness journey.',
+      imagePath: 'assets/images/onboarding_mood.jpg', // Example path
       color: const Color(0xFFFF6B6B),
     ),
     OnboardingPage(
-      title: 'Sleep Analysis',
-      description:
-          'Monitor your sleep patterns and get personalized recommendations for better rest.',
-      icon: Icons.bedtime,
-      color: const Color(0xFF9C27B0),
-    ),
-    OnboardingPage(
-      title: 'Color Therapy',
-      description:
-          'Customize your app experience with therapeutic colors that match your mood.',
-      icon: Icons.palette,
-      color: const Color(0xFFFF9F43),
-    ),
-    // ✅ New Empty Chair feature page
-    OnboardingPage(
       title: 'Empty Chair Sessions',
       description:
-          'Talk to your thoughts and emotions in a safe space. The Empty Chair feature helps you express and heal.',
-      icon: Icons.chair_alt,
+          'Talk to your thoughts in a safe space. A feature to help you express and heal.',
+      imagePath: 'assets/images/onboarding_chair.png', // Example path
       color: const Color(0xFF2E86AB),
     ),
   ];
 
   @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  // --- Navigation Logic ---
+  Future<void> _completeOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_completed_onboarding', true);
+    if (mounted) {
+      context.go('/login');
+    }
+  }
+
+  void _onPageChanged(int index) {
+    setState(() {
+      _currentPage = index;
+    });
+  }
+
+  // --- UI Build Method ---
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          // Use the mixWith() extension to create a two-color gradient
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              _pages[_currentPage].color,
-              // Mix the current color with black to create a shaded gradient
-              _pages[_currentPage].color.mixWith(Colors.black, 0.4),
-            ],
-          ),
-        ),
-        child: SafeArea(
+    bool isLastPage = _currentPage == _pages.length - 1;
+
+    // AnimatedContainer provides a smooth background color transition
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      color: _pages[_currentPage].color,
+      child: Scaffold(
+        backgroundColor:
+            Colors.transparent, // Important for the animation to be visible
+        body: SafeArea(
           child: Column(
             children: [
+              // The main content area with illustrations
               Expanded(
+                flex: 3,
                 child: PageView.builder(
                   controller: _pageController,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentPage = index;
-                    });
-                  },
+                  onPageChanged: _onPageChanged,
                   itemCount: _pages.length,
-                  itemBuilder: (context, index) {
-                    return _buildPage(_pages[index]);
-                  },
+                  itemBuilder: (context, index) =>
+                      OnboardingPageContent(page: _pages[index]),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    SmoothPageIndicator(
-                      controller: _pageController,
-                      count: _pages.length,
-                      effect: WormEffect(
-                        dotColor: Colors.white.withOpacity(0.5),
-                        activeDotColor: Colors.white,
-                        dotHeight: 12,
-                        dotWidth: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        if (_currentPage > 0)
-                          TextButton(
-                            onPressed: () {
-                              _pageController.previousPage(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                              );
-                            },
-                            child: const Text(
-                              'Previous',
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 16),
-                            ),
-                          )
-                        else
-                          const SizedBox(width: 80),
-                        ElevatedButton(
-                          onPressed: () async {
-                            if (_currentPage == _pages.length - 1) {
-                              final prefs =
-                                  await SharedPreferences.getInstance();
-                              await prefs.setBool(
-                                  'has_completed_onboarding', true);
-
-                              if (mounted) {
-                                context.go('/login');
-                              }
-                            } else {
-                              _pageController.nextPage(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: _pages[_currentPage].color,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 30, vertical: 15),
-                          ),
-                          child: Text(
-                            _currentPage == _pages.length - 1
-                                ? 'Get Started'
-                                : 'Next',
-                            style: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+              // The bottom card with text and navigation
+              Expanded(
+                flex: 2,
+                child: OnboardingNavigation(
+                  pageController: _pageController,
+                  pages: _pages,
+                  currentPage: _currentPage,
+                  isLastPage: isLastPage,
+                  onSkip: _completeOnboarding,
+                  onNext: () {
+                    if (isLastPage) {
+                      _completeOnboarding();
+                    } else {
+                      _pageController.nextPage(
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  },
                 ),
               ),
             ],
@@ -180,62 +138,127 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
     );
   }
+}
 
-  Widget _buildPage(OnboardingPage page) {
+// --- Helper Widgets for Cleaner Code ---
+
+// Displays the illustration for a page
+class OnboardingPageContent extends StatelessWidget {
+  final OnboardingPage page;
+  const OnboardingPageContent({super.key, required this.page});
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(40),
+      padding: const EdgeInsets.all(40.0).copyWith(bottom: 0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 150,
-            height: 150,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(75),
+          Expanded(
+            child: Image.asset(
+              page.imagePath,
+              // Add a fallback in case the image fails to load
+              errorBuilder: (context, error, stackTrace) {
+                return const Center(
+                  child: Icon(Icons.image_not_supported,
+                      color: Colors.white, size: 80),
+                );
+              },
             ),
-            child: Icon(
-              page.icon,
-              size: 80,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 50),
-          Text(
-            page.title,
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
-          Text(
-            page.description,
-            style: const TextStyle(
-              fontSize: 18,
-              color: Colors.white,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
         ],
       ),
     );
   }
 }
 
-class OnboardingPage {
-  final String title;
-  final String description;
-  final IconData icon;
-  final Color color;
+// Displays the bottom navigation card
+class OnboardingNavigation extends StatelessWidget {
+  final PageController pageController;
+  final List<OnboardingPage> pages;
+  final int currentPage;
+  final bool isLastPage;
+  final VoidCallback onSkip;
+  final VoidCallback onNext;
 
-  OnboardingPage({
-    required this.title,
-    required this.description,
-    required this.icon,
-    required this.color,
+  const OnboardingNavigation({
+    super.key,
+    required this.pageController,
+    required this.pages,
+    required this.currentPage,
+    required this.isLastPage,
+    required this.onSkip,
+    required this.onNext,
   });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(24.0),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(40.0),
+          topRight: Radius.circular(40.0),
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            pages[currentPage].title,
+            style:
+                textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            pages[currentPage].description,
+            style: textTheme.bodyLarge
+                ?.copyWith(color: Colors.grey[600], height: 1.5),
+            textAlign: TextAlign.center,
+          ),
+          const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Skip Button
+              TextButton(
+                onPressed: onSkip,
+                child: Text('Skip', style: TextStyle(color: Colors.grey[600])),
+              ),
+
+              // Page Indicator
+              SmoothPageIndicator(
+                controller: pageController,
+                count: pages.length,
+                effect: WormEffect(
+                  dotColor: Colors.grey[300]!,
+                  activeDotColor: pages[currentPage].color,
+                  dotHeight: 10,
+                  dotWidth: 10,
+                ),
+              ),
+
+              // Next / Get Started Button
+              SizedBox(
+                width: 80, // Ensures consistent button size
+                child: isLastPage
+                    ? TextButton(onPressed: onNext, child: const Text("Start"))
+                    : IconButton.filled(
+                        onPressed: onNext,
+                        style: IconButton.styleFrom(
+                            backgroundColor: pages[currentPage].color),
+                        icon: const Icon(Icons.arrow_forward_ios_rounded),
+                      ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
