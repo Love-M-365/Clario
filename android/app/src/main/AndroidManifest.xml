@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"   package="com.example.clario"> 
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="new_clario"
         android:name="${applicationName}"
@@ -43,3 +45,4 @@
         </intent>
     </queries>
 </manifest>
+

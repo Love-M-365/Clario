@@ -15,6 +15,7 @@ dependencies:
   firebase_core: ^4.1.0 
   firebase_auth: ^6.0.2
   firebase_database: ^12.0.1
+  firebase_storage: ^13.0.1
   google_sign_in: ^6.2.1 #ish
   # State Management
   provider: ^6.1.1
@@ -32,13 +33,13 @@ dependencies:
   speech_to_text: ^7.0.0  # or latest on pub.dev
   audioplayers: ^6.5.1
   flutter_tts: ^4.2.3
+
   
   # Sensors & Hardware
   vibration: ^3.1.3
   sensors_plus: ^6.1.2
   
   # Networking & HTTP
-  http: ^1.1.2
   dio: ^5.4.0
   
   # Local Storage
@@ -69,6 +70,7 @@ dependencies:
   
   # Sleep & Health
   health: ^13.1.4  
+  cloud_firestore: ^6.0.3
 
 dev_dependencies:
   flutter_test:
@@ -93,6 +95,7 @@ flutter:
     - assets/animations/
     - assets/sounds/
     - assets/quotes/
+    - assets/avatars/
 
   fonts:
     - family: Poppins

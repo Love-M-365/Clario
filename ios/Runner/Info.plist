@@ -7,6 +7,7 @@
 <key>CFBundleURLTypes</key>
 <array>           
 	<dict>
+	
 		<key>CFBundleTypeRole</key>
 		<string>Editor</string>
 		<key>CFBundleURLSchemes</key>
@@ -61,5 +62,12 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+</dict>
+<dict>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>This app uses speech recognition to turn your voice into a journal entry.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>This app needs microphone access to enable voice-based journaling.</string>
+
 </dict>
 </plist>

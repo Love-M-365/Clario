@@ -18,6 +18,10 @@ import '../screens/EmptyChair/empty_chair_screen.dart';
 import '../screens/EmptyChair/summary_screen.dart';
 import '../screens/home/NotificationPanelScreen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/home/ai_chat_screen.dart';
+import '../screens/home/journal_entry_screen.dart';
+import '../screens/home/relation_map_screen.dart';
+import '../screens/avatar_prompt_screen.dart';
 
 final GoRouter _router = GoRouter(
   initialLocation: '/',
@@ -63,8 +67,17 @@ final GoRouter _router = GoRouter(
           builder: (context, state) => const EmptyChairIntroScreen(),
         ),
         GoRoute(
+          path: 'clario-AI',
+          name: 'clario_AI',
+          builder: (context, state) => const AIChatScreen(),
+        ),
+        GoRoute(
           path: '/chatbot',
           builder: (context, state) => const ChatbotScreen(),
+        ),
+        GoRoute(
+          path: 'journal-entry',
+          builder: (context, state) => const JournalEntryScreen(),
         ),
         GoRoute(
           path: '/emptyChair',
@@ -80,9 +93,18 @@ final GoRouter _router = GoRouter(
           builder: (context, state) => const NotificationPanelScreen(),
         ),
         GoRoute(
+          path: 'relationship-mapping',
+          name: 'relation_mapping',
+          builder: (context, state) => const RelationMapScreen(),
+        ),
+        GoRoute(
           path: 'settings',
           name: 'settings',
           builder: (context, state) => const SettingsScreen(),
+        ),
+        GoRoute(
+          path: 'avatar-prompt', // Relative to settings path
+          builder: (context, state) => const AvatarPromptScreen(),
         ),
       ],
     ),

@@ -15,7 +15,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<UserDataProvider>(context, listen: false).loadUserData();
+      // NEW CORRECTED CODE
+      Provider.of<UserDataProvider>(context, listen: false).fetchUserData();
     });
   }
 

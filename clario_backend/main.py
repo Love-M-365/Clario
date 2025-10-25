@@ -1,34 +1,74 @@
+
 import os
 import json
+import re # For parsing Gemini response
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify
 import firebase_admin
-from firebase_admin import auth, credentials
-from google import genai
-from google.cloud import firestore
+from firebase_admin import auth, credentials, initialize_app, db as rtdb # Use RTDB for simplicity with getCurrentAvatar example
+from google.cloud import firestore # Keep if used by Flask routes
+import functions_framework
+from google.cloud import language_v1 # For old analyzeMood helper (optional fallback)
+
+# --- Imports for Gemini ---
+import google.generativeai as genai
+
+# --- Imports for generateAvatar ---
+import vertexai
+import base64
+from vertexai.preview.vision_models import ImageGenerationModel
 
 # ------------------ CONFIG ------------------
-PROJECT_ID = "clario-f60b0"
+PROJECT_ID = "clario-f60b0" # Your Project ID
 LOCATION = "us-central1"
-MODEL = "gemini-2.5-flash"
+GEMINI_MODEL_CHAT = "gemini-pro" # Model for chat
+GEMINI_MODEL_ANALYSIS = "gemini-pro"# Model for sentiment analysis
 
-MAX_RECENT = 8
-SUMMARY_TRIGGER = 10
+MAX_RECENT_HISTORY = 10 # How many turns of recent history to include in chat prompt
 
 # ------------------ Initialize Clients ------------------
+# Initialize Firebase Admin SDK (runs only once per instance)
 if not firebase_admin._apps:
-    cred = credentials.ApplicationDefault()
-    firebase_admin.initialize_app(cred, {"projectId": PROJECT_ID})
+    initialize_app()
 
-db = firestore.Client(project=PROJECT_ID)
-client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
+db_firestore = firestore.Client(project=PROJECT_ID) # Keep for Flask routes if needed
+language_client_nlp = language_v1.LanguageServiceClient() # Keep for fallback sentiment
 
+# --- Configure Gemini ---
+# IMPORTANT: Set GOOGLE_API_KEY environment variable during deployment
+try:
+    gemini_api_key = os.environ.get("GOOGLE_API_KEY")
+    if not gemini_api_key:
+        raise ValueError("GOOGLE_API_KEY environment variable not set.")
+    genai.configure(api_key=gemini_api_key)
+    print("Gemini configured successfully.")
+except Exception as e:
+    print(f"ERROR: Failed to configure Gemini: {e}")
+    # Handle this case - maybe disable Gemini features?
+
+# Initialize Flask app (used for /chat and /onboarding routes IF deploying as Cloud Run)
 app = Flask(__name__)
 
-# ------------------ Onboarding Questions ------------------
+# ------------------ Authentication Helper ------------------
+def verify_token(req):
+    """Verifies the Firebase Auth token from the request header."""
+    # ... (Keep existing verify_token function) ...
+    auth_header = req.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        print("Missing or invalid Authorization header")
+        return None
+    id_token = auth_header.split(' ').pop()
+    try:
+        decoded_token = auth.verify_id_token(id_token)
+        return decoded_token
+    except Exception as e:
+        print(f"Error verifying token: {e}")
+        return None
+
+
+# ------------------ Onboarding Data (Keep as is) ------------------
 ONBOARDING_QUESTIONS_FULL = [
-    "",
-    "Hi, I am Clario. Before we begin, I’d love to get to know you a little better. I’ll ask you a few quick questions about yourself so I can support you in a way that feels personal and meaningful. So, what’s your name (or nickname you’d like me to use)?",
+    "", "Hi, I am Clario. Before we begin, I’d love to get to know you a little better. I’ll ask you a few quick questions about yourself so I can support you in a way that feels personal and meaningful. So, what’s your name (or nickname you’d like me to use)?",
     "How old are you?",
     "What’s your gender/pronouns (optional)?",
     "How are you feeling today on a scale of 1–10?",
@@ -44,9 +84,8 @@ ONBOARDING_QUESTIONS_FULL = [
     "Do you want me to check in if I notice you sound very sad, anxious, or hopeless?",
     "Do you have a trusted person I should remind you to reach out to if you’re feeling very low? If yes, who?",
     "Do you prefer short, friendly chats or longer, deeper conversations?",
-    "Is there anything you don’t want me to talk about?"
+    "Is there anything you don’t want me to talk about?",
 ]
-
 ONBOARDING_KEYS = [
     "intro","name", "age", "gender", "mood_scale", "stress_status", "therapy_history",
     "main_goal", "life_areas", "important_people", "track_interactions",
@@ -54,188 +93,289 @@ ONBOARDING_KEYS = [
     "trusted_person", "conversation_length_pref", "no_talk_topics"
 ]
 
-# ------------------ Firestore Utilities ------------------
+# ------------------ Firestore Utilities (Keep as is) ------------------
+# These use db_firestore
 def get_user_profile(user_id):
-    doc_ref = db.collection("users").document(user_id)
+    doc_ref = db_firestore.collection("users").document(user_id)
     doc = doc_ref.get()
     return doc.to_dict() if doc.exists else {}
 
 def save_user_profile(user_id, profile_data):
-    db.collection("users").document(user_id).set(profile_data)
+    db_firestore.collection("users").document(user_id).set(profile_data, merge=True)
 
 def save_chat_message(user_id, role, text):
-    db.collection("users").document(user_id).collection("chats").document().set({
-        "role": role,
-        "text": text,
-        "ts": datetime.now(timezone.utc)
+     db_firestore.collection("users").document(user_id).collection("chats").document().set({
+        "role": role, "text": text, "ts": datetime.now(timezone.utc)
     })
 
 def load_history(user_id):
-    chats_ref = db.collection("users").document(user_id).collection("chats").order_by("ts")
+    chats_ref = db_firestore.collection("users").document(user_id).collection("chats").order_by("ts", direction=firestore.Query.DESCENDING).limit(MAX_RECENT_HISTORY * 2) # Limit history load
     docs = chats_ref.stream()
     history = []
     for doc in docs:
         data = doc.to_dict()
-        history.append({
-            "role": data.get("role"),
-            "text": data.get("text"),
-            "ts": data.get("ts").isoformat() if hasattr(data.get("ts"), "isoformat") else str(data.get("ts"))
-        })
-    return history
+        ts_val = data.get("ts")
+        ts_str = ts_val.isoformat() if hasattr(ts_val, "isoformat") else str(ts_val)
+        history.append({ "role": data.get("role"), "text": data.get("text"), "ts": ts_str })
+    return history[::-1] # Reverse to get chronological order
 
-# ------------------ AI Logic ------------------
-def summarize_memory(history):
-    preamble = (
-        "Summarize essential, stable facts from the conversation that will help in future therapy-style responses. "
-        "Include user's background facts, ongoing problems, therapy preferences, exercises tried, and any safety concerns. "
-        "Keep summary concise (<= 250 words)."
-    )
-    convo_text = [f"{t['role'].upper()} ({t['ts']}): {t['text']}" for t in history]
-    full_input = preamble + "\n\nConversation:\n" + "\n".join(convo_text)
-    resp = client.models.generate_content(model=MODEL, contents=full_input)
+
+# --- Gemini Chat Helper ---
+def generate_gemini_chat_reply(history, user_message, profile):
+    """Generates a chat reply using the Gemini API."""
     try:
-        return resp.candidates[0].content.parts[0].text.strip()
-    except Exception:
-        return ""
+        model = genai.GenerativeModel(GEMINI_MODEL_CHAT)
+        
+        # Build context for Gemini
+        context_prompt = (
+            "You are Clario, a compassionate mental health companion. "
+            "Behave like a supportive therapist and friend: validate feelings, ask clarifying questions. "
+            "Speak warmly, 2-3 sentences. Prioritize empathy. "
+            "If self-harm risk, direct user to professional help.\n"
+            "User profile:\n"
+            f"{json.dumps(profile, indent=2)}\n\n"
+            "Recent conversation history (user and assistant turns):\n"
+        )
+        
+        # Format history for the model (ensure user/model roles)
+        gemini_history = []
+        for turn in history:
+             # Adjust role based on Gemini's expectation ('user'/'model')
+             role = 'user' if turn.get('role') == 'user' else 'model' 
+             gemini_history.append({'role': role, 'parts': [turn.get('text', '')]})
 
-def build_prompt(memory_summary, history, profile):
-    instructions = (
-        "You are Clario — a compassionate, evidence-informed mental health companion. "
-        "Behave like a supportive therapist and best friend: validate feelings, ask clarifying questions. "
-        "Speak in a warm, conversational tone, 2-3 sentences. "
-        "Prioritize empathy. Do not suggest exercises immediately unless user shares details. "
-        "If self-harm risk, direct user to professional help.\n"
-        "Use the following guidance:\n"
-        "- Guilt/conflict → Empty Chair Technique\n"
-        "- Anxiety → Grounding 5-4-3-2-1\n"
-        "- Overwhelm → Breathing/journaling\n"
-        "- Hopeless/self-critical → Gentle reframing/affirmations\n"
-    )
-    parts = [instructions]
+        # Start chat with context and history
+        chat_session = model.start_chat(history=gemini_history)
+        
+        # Send the latest user message (append context if desired, or let history handle it)
+        full_user_prompt = f"{context_prompt}\nUSER: {user_message}\nASSISTANT:" # Or just user_message if using start_chat history
+        
+        # Use generate_content for single turn with full context, or send_message with chat_session
+        # Using generate_content for simplicity here, including history in the prompt text
+        prompt_parts = [context_prompt]
+        for turn in history: # Add history turns explicitly
+             prompt_parts.append(f"{turn.get('role', '').upper()}: {turn.get('text', '')}")
+        prompt_parts.append(f"USER: {user_message}")
+        prompt_parts.append("ASSISTANT:") # Ask model to complete as assistant
 
-    if profile:
-        parts.append("User profile:\n" + json.dumps(profile, indent=2) + "\n")
-    if memory_summary:
-        parts.append("Memory summary:\n" + memory_summary + "\n")
+        response = model.generate_content("\n".join(prompt_parts))
 
-    recent = history[-MAX_RECENT*2:] if history else []
-    if recent:
-        parts.append("Recent conversation:")
-        for turn in recent:
-            parts.append(f"{turn['role'].upper()} ({turn['ts']}): {turn['text']}")
-        parts.append("")
+        # response = chat_session.send_message(user_message) # Alternative using chat session state
+        
+        reply_text = response.text.strip()
+        print(f"Gemini chat reply generated: '{reply_text[:60]}...'")
+        return reply_text
+        
+    except Exception as e:
+        print(f"ERROR generating Gemini chat reply: {e}")
+        # Consider checking specific error types (e.g., BlockedPromptException)
+        return "I'm having trouble thinking right now. Could you try rephrasing?"
 
-    parts.append("Now respond to the user's latest message empathetically.")
-    return "\n".join(parts)
 
-def get_assistant_reply(memory_summary, history, user_message, profile):
-    temp_history = history + [{"role": "user", "text": user_message, "ts": datetime.now(timezone.utc).isoformat()}]
-    prompt = build_prompt(memory_summary, temp_history, profile)
-    resp = client.models.generate_content(model=MODEL, contents=prompt)
+def analyze_sentiment_with_gemini(text_content):
+    """
+    Analyzes sentiment using Gemini, aiming for a 0-10 score and tag.
+    Improved JSON parsing and validation.
+    """
+    if not text_content: # Handle empty input
+        print("WARN: analyze_sentiment_with_gemini received empty text.")
+        return {"score": 0.0, "tag": "Neutral"}
+
     try:
-        return resp.candidates[0].content.parts[0].text.strip()
-    except Exception:
-        return "Sorry, I couldn't generate a response right now."
+        model = genai.GenerativeModel(GEMINI_MODEL_ANALYSIS)
+        prompt = (
+            "Analyze the sentiment of the following journal entry. Provide a sentiment score from 0 (very negative) to 10 (very positive) "
+            "and a single descriptive tag (e.g., Positive, Negative, Neutral, Anxious, Grateful, Frustrated, Hopeful, Mixed). "
+            "Format the output strictly as JSON: {\"score\": SCORE, \"tag\": \"TAG\"}\n\n"
+            f"Journal Entry:\n\"\"\"\n{text_content}\n\"\"\"\n\n"
+            "JSON Output:"
+        )
 
-# ------------------ Flask Routes ------------------
+        # Generate content with safety settings if needed (optional)
+        # response = model.generate_content(prompt, safety_settings={'HARASSMENT': 'BLOCK_NONE', ...})
+        response = model.generate_content(prompt)
+
+        # Check for empty or blocked response *before* accessing text
+        if not response.candidates:
+             print("WARN: Gemini response blocked or empty.")
+             # Check response.prompt_feedback if needed for block reason
+             return {"score": 0.0, "tag": "Neutral"} # Fallback
+
+        response_text = response.text.strip()
+        print(f"Gemini sentiment analysis raw response: {response_text}")
+
+        # Attempt to extract and parse the JSON response more robustly
+        try:
+            # Find the first JSON object using regex
+            match = re.search(r"\{.*\}", response_text, re.DOTALL)
+            if not match:
+                raise ValueError("No JSON object found in the response.")
+
+            json_string = match.group(0)
+            result = json.loads(json_string)
+
+            # Validate structure and types
+            score_val = result.get("score")
+            tag_val = result.get("tag")
+
+            if isinstance(score_val, (int, float)) and isinstance(tag_val, str):
+                score_0_10 = float(score_val)
+                # Clamp score to 0-10 range just in case
+                score_0_10 = max(0.0, min(10.0, score_0_10))
+
+                # Convert 0-10 score to -1.0 to +1.0
+                score_neg1_pos1 = (score_0_10 / 5.0) - 1.0
+
+                print(f"Gemini sentiment parsed: Score={score_neg1_pos1:.2f} (from {score_0_10}), Tag={tag_val}")
+                return {"score": score_neg1_pos1, "tag": tag_val}
+            else:
+                raise ValueError(f"Parsed JSON has incorrect structure or types. Score: {score_val}, Tag: {tag_val}")
+
+        except (json.JSONDecodeError, ValueError, AttributeError) as json_e:
+            print(f"ERROR: Failed to extract or parse Gemini sentiment JSON: {json_e}. Raw response: '{response_text}'")
+            # Fallback to neutral
+            return {"score": 0.0, "tag": "Neutral"}
+
+    # Catch potential errors during the API call itself
+    except Exception as e:
+        print(f"ERROR analyzing sentiment with Gemini API call: {e}")
+        # Fallback to neutral on error
+        return {"score": 0.0, "tag": "Neutral"}
+
+
+# --- Cloud Function: analyzeMood (No changes needed here, relies on fixed helper) ---
+@functions_framework.http
+def analyzeMood(req):
+    """HTTP Cloud Function: Analyzes journal entry mood using Gemini. Requires Auth."""
+    decoded_token = verify_token(req) # Assuming verify_token is defined
+    if not decoded_token: return ("Unauthorized", 401)
+
+    if req.method == "OPTIONS": # Handle CORS
+        headers = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Access-Control-Max-Age": "3600"}
+        return ("", 204, headers)
+    headers = {"Access-Control-Allow-Origin": "*"}
+
+    if not req.is_json: return ("Request must be JSON", 400, headers)
+    request_json = req.get_json(silent=True)
+    if not request_json or "text" not in request_json: return ("JSON payload must contain a 'text' field", 400, headers)
+
+    journal_text = request_json["text"]
+    if not journal_text.strip(): # Check if text is empty after stripping whitespace
+         print(f"analyzeMood: Received empty journal text for user {decoded_token.get('uid', 'unknown')}. Returning Neutral.")
+         return (jsonify({"score": 0.0, "tag": "Neutral"}), 200, headers) # Return neutral for empty text
+
+    try:
+        # --- USE FIXED GEMINI HELPER ---
+        sentiment_result = analyze_sentiment_with_gemini(journal_text)
+        print(f"analyzeMood (Gemini): User {decoded_token.get('uid', 'unknown')}, Result: {sentiment_result}")
+        return (jsonify(sentiment_result), 200, headers)
+    except Exception as e:
+        # This catches errors *within* analyzeMood, not necessarily in the helper
+        print(f"Unexpected error in analyzeMood function: {e}")
+        return ("Internal Server Error", 500, headers)
+# --- Cloud Function: generateAvatar (Keep as is - uses Vertex AI SDK) ---
+@functions_framework.http
+def generateAvatar(req):
+    """Generates an avatar using Vertex AI Imagen and returns it as base64."""
+    # ... (Keep existing generateAvatar function code exactly as it was) ...
+    decoded_token = verify_token(req)
+    if not decoded_token: return ("Unauthorized", 401)
+
+    if req.method == "OPTIONS": # CORS
+        headers = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Access-Control-Max-Age": "3600"}
+        return ("", 204, headers)
+    headers = {"Access-Control-Allow-Origin": "*"}
+
+    if not req.is_json: return ("Request must be JSON", 400, headers)
+    try:
+        request_json = req.get_json(silent=True)
+        prompt = request_json['prompt']
+        if not prompt: return ("'prompt' field cannot be empty", 400, headers)
+    except (TypeError, KeyError): return ("Bad Request: JSON payload must include a 'prompt'", 400, headers)
+
+    try:
+        vertexai.init(project=PROJECT_ID, location=LOCATION)
+        model = ImageGenerationModel.from_pretrained("imagegeneration@006")
+        print(f"generateAvatar: User {decoded_token.get('uid', 'unknown')}, Prompt: '{prompt[:50]}...'")
+        response_object = model.generate_images(prompt=prompt, number_of_images=1, aspect_ratio="1:1")
+        generated_images_list = response_object.images
+        if not generated_images_list:
+             print(f"Error: Imagen returned no images. Prompt: '{prompt}'. Safety filters?")
+             return (jsonify({"error": "Image generation failed (Imagen), possibly due to safety filters."}), 500, headers)
+        image_bytes = generated_images_list[0]._image_bytes
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        print(f"generateAvatar: Success for user {decoded_token.get('uid', 'unknown')}")
+        return (jsonify({"image_base64": base64_image}), 200, headers)
+    except Exception as e:
+        print(f"Error generating image via Imagen: {e}")
+        return (jsonify({"error": f"Internal server error during image generation: {str(e)}"}), 500, headers)
+
+
+# --- Flask Routes (Keep as is, now /chat uses Gemini) ---
 @app.route("/chat", methods=["POST"])
 def chat():
+    """Flask Route: Handles general chat interactions using Gemini."""
     try:
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return jsonify({"error": "Missing or invalid Authorization header"}), 401
-
-        id_token = auth_header.split(" ")[1]
-        decoded_token = auth.verify_id_token(id_token)
+        decoded_token = verify_token(request)
+        if not decoded_token: return jsonify({"error": "Unauthorized"}), 401
         user_id = decoded_token["uid"]
 
         profile = get_user_profile(user_id)
         body = request.get_json()
         user_message = body.get("message", "").strip()
 
-        # ---- Onboarding ----
         if not profile.get("onboarding_complete", False):
-            answered_keys = [k for k in ONBOARDING_KEYS if k in profile]
-            current_index = len(answered_keys)
+           return jsonify({"error": "Please complete onboarding first via /onboarding route."}), 400
 
-            # First question if no answer yet
-            if current_index == 0 and not user_message:
-                return jsonify({
-                    "status": "in_progress",
-                    "question": ONBOARDING_QUESTIONS_FULL[0]
-                })
-
-            # Save the previous answer
-            if user_message and current_index < len(ONBOARDING_KEYS):
-                current_key = ONBOARDING_KEYS[current_index]
-                profile[current_key] = user_message
-                save_user_profile(user_id, profile)
-                current_index += 1
-
-            # Check if onboarding is complete
-            if current_index >= len(ONBOARDING_QUESTIONS_FULL):
-                profile["onboarding_complete"] = True
-                save_user_profile(user_id, profile)
-                return jsonify({
-                    "status": "complete",
-                    "message": "Onboarding completed! You can now start chatting."
-                })
-
-            # Ask next question
-            return jsonify({
-                "status": "in_progress",
-                "question": ONBOARDING_QUESTIONS_FULL[current_index]
-            })
-
-        # ---- Normal chat ----
-        history = load_history(user_id)
-        memory_summary = summarize_memory(history) if len(history) >= SUMMARY_TRIGGER else ""
+        history = load_history(user_id) # Loads limited recent history
         save_chat_message(user_id, "user", user_message)
-        reply = get_assistant_reply(memory_summary, history, user_message, profile)
+
+        # --- Use Gemini for reply ---
+        reply = generate_gemini_chat_reply(history, user_message, profile)
+        # --- End Gemini call ---
+
         save_chat_message(user_id, "assistant", reply)
         return jsonify({"reply": reply})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Error in /chat route: {e}")
+        return jsonify({"error": "An internal server error occurred"}), 500
 
-# ------------------ Onboarding Route ------------------
 @app.route("/onboarding", methods=["POST"])
 def onboarding():
+    """Flask Route: Handles the step-by-step onboarding process."""
+    # ... (Keep existing onboarding logic exactly as it was) ...
     try:
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return jsonify({"error": "Missing or invalid Authorization header"}), 401
-
-        id_token = auth_header.split(" ")[1]
-        decoded_token = auth.verify_id_token(id_token)
+        decoded_token = verify_token(request) 
+        if not decoded_token: return jsonify({"error": "Unauthorized"}), 401
         user_id = decoded_token["uid"]
-
         body = request.get_json()
         user_response = body.get("answer", "").strip()
-
-        profile_ref = db.collection("users").document(user_id)
-        profile_doc = profile_ref.get()
-        profile_data = profile_doc.to_dict() if profile_doc.exists else {}
-
-        answered_keys = [k for k in ONBOARDING_KEYS if k in profile_data]
-        current_index = len(answered_keys)
-
-        if user_response and current_index < len(ONBOARDING_KEYS):
-            prev_key = ONBOARDING_KEYS[current_index - 1]
-            profile_data[prev_key] = user_response
-            profile_ref.set(profile_data, merge=True)
-            current_index += 1
-
-        if current_index >= len(ONBOARDING_QUESTIONS_FULL):
+        profile_data = get_user_profile(user_id)
+        answered_keys = [k for k in ONBOARDING_KEYS if k in profile_data and k != "intro"]
+        current_question_index = len(answered_keys) + 1 
+        if user_response and current_question_index > 0: 
+            previous_key_index = current_question_index -1 
+            if previous_key_index < len(ONBOARDING_KEYS): 
+                 previous_key = ONBOARDING_KEYS[previous_key_index]
+                 profile_data[previous_key] = user_response
+                 save_user_profile(user_id, profile_data) 
+        answered_keys_after_save = [k for k in ONBOARDING_KEYS if k in profile_data and k != "intro"]
+        next_question_index = len(answered_keys_after_save) + 1
+        if next_question_index >= len(ONBOARDING_QUESTIONS_FULL):
             profile_data["onboarding_complete"] = True
-            profile_ref.set(profile_data, merge=True)
+            save_user_profile(user_id, profile_data) 
             return jsonify({"status": "complete", "message": "Onboarding completed!"})
-
-        return jsonify({"status": "in_progress", "question": ONBOARDING_QUESTIONS_FULL[current_index]})
-
+        return jsonify({"status": "in_progress", "question": ONBOARDING_QUESTIONS_FULL[next_question_index]})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
+        print(f"Error in /onboarding route: {e}")
+        return jsonify({"status": "error", "message": "An internal server error occurred"}), 500
 
-# ------------------ Entry ------------------
+
+# ------------------ Entry for Local Flask Development ------------------
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    print("Starting Flask server for local development...")
+    # Make sure GOOGLE_API_KEY is set in your local environment for testing
+    if not os.environ.get("GOOGLE_API_KEY"):
+         print("WARNING: GOOGLE_API_KEY environment variable not set for local testing.")
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)), debug=True)

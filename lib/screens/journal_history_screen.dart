@@ -1,7 +1,12 @@
+// lib/screens/journal_history_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:collection/collection.dart'; // Import the collection package for firstWhereOrNull
+import 'package:collection/collection.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../../models/journal_entry.dart';
 import '../../providers/user_data_provider.dart';
 
 class JournalHistoryScreen extends StatefulWidget {
@@ -12,329 +17,332 @@ class JournalHistoryScreen extends StatefulWidget {
 }
 
 class _JournalHistoryScreenState extends State<JournalHistoryScreen> {
-  DateTime _selectedDate = DateTime.now();
-  bool _isShowingAll = true;
+  late PageController _pageController;
+  Map<DateTime, List<JournalEntry>> _groupedEntries = {};
+  List<DateTime> _sortedDates = [];
+  int _currentPageIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    // In a real app, you would load data for the current week here
-    // Provider.of<UserDataProvider>(context, listen: false).loadJournalsForWeek(_selectedDate);
+    _pageController = PageController();
+
+    // Listen for page changes to update the header
+    _pageController.addListener(() {
+      final newIndex = _pageController.page?.round() ?? 0;
+      if (_currentPageIndex != newIndex) {
+        setState(() {
+          _currentPageIndex = newIndex;
+        });
+      }
+    });
+
+    // Fetch and process journal data as soon as the screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAndProcessJournals();
+    });
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2023),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: ColorScheme.fromSwatch(
-              primarySwatch: Colors.blue,
-              accentColor: Colors.blueAccent,
-              cardColor: const Color(0xFF131A2D),
-              backgroundColor: const Color(0xFF0C132D),
-            ).copyWith(
-              onSurface: Colors.white,
-            ),
-            textTheme: const TextTheme(
-              bodyMedium: TextStyle(color: Colors.white),
-            ),
-            dialogBackgroundColor: const Color(0xFF131A2D),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-        _isShowingAll = false;
-      });
-      // In a real app, you would fetch data for the selected date
-      // Provider.of<UserDataProvider>(context, listen: false).loadJournalsForDate(_selectedDate);
+  void _loadAndProcessJournals() async {
+    final provider = Provider.of<UserDataProvider>(context, listen: false);
+    await provider.fetchAllJournals();
+
+    final entries = provider.journalEntries;
+
+    // Group entries by the date (ignoring time)
+    final grouped = groupBy(entries, (entry) {
+      return DateTime(
+          entry.timestamp.year, entry.timestamp.month, entry.timestamp.day);
+    });
+
+    setState(() {
+      _groupedEntries = grouped;
+      // Sort the dates (keys of the map), most recent first
+      _sortedDates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _jumpToDate(DateTime date) {
+    // Normalize date to ignore time
+    final targetDate = DateTime(date.year, date.month, date.day);
+    final pageIndex = _sortedDates.indexOf(targetDate);
+    if (pageIndex != -1) {
+      _pageController.jumpToPage(pageIndex);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No journal entry found for this date.")),
+      );
     }
   }
 
-  void _showAllJournals() {
-    setState(() {
-      _isShowingAll = true;
-      _selectedDate = DateTime.now();
-    });
-    // In a real app, you would fetch the last 7 days again
-    // Provider.of<UserDataProvider>(context, listen: false).loadJournalsForWeek(_selectedDate);
+  void _jumpToMonth(DateTime date) {
+    // Find the first entry in or after the selected month
+    final targetDate = _sortedDates
+        .firstWhereOrNull((d) => d.year == date.year && d.month == date.month);
+
+    if (targetDate != null) {
+      final pageIndex = _sortedDates.indexOf(targetDate);
+      _pageController.jumpToPage(pageIndex);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No entries found for this month.")),
+      );
+    }
+  }
+
+  Future<void> _showFilterDialog() async {
+    final selectedOption = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Filter Journals'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+                title: const Text('Jump to Date'),
+                onTap: () => Navigator.pop(context, 1)),
+            ListTile(
+                title: const Text('Jump to Month'),
+                onTap: () => Navigator.pop(context, 2)),
+          ],
+        ),
+      ),
+    );
+
+    if (selectedOption == 1) {
+      // Pick Date
+      final pickedDate = await showDatePicker(
+        context: context,
+        initialDate: _sortedDates.isNotEmpty
+            ? _sortedDates[_currentPageIndex]
+            : DateTime.now(),
+        firstDate: DateTime(2023),
+        lastDate: DateTime.now(),
+      );
+      if (pickedDate != null) _jumpToDate(pickedDate);
+    } else if (selectedOption == 2) {
+      // Pick Month
+      final pickedMonth = await showDatePicker(
+        context: context,
+        initialDate: _sortedDates.isNotEmpty
+            ? _sortedDates[_currentPageIndex]
+            : DateTime.now(),
+        firstDate: DateTime(2023),
+        lastDate: DateTime.now(),
+        initialDatePickerMode: DatePickerMode.year,
+      );
+      if (pickedMonth != null) _jumpToMonth(pickedMonth);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Journal History',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('My Journal'),
+        backgroundColor: const Color(0xFFF1E9D8), // A creamy paper color
+        foregroundColor: const Color(0xFF3C2E20), // Dark brown text
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.2),
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_month),
-            onPressed: () => _selectDate(context),
+            icon: const Icon(Icons.filter_list_rounded),
+            onPressed: _showFilterDialog,
           ),
-          if (!_isShowingAll)
-            TextButton(
-              onPressed: _showAllJournals,
-              child: const Text(
-                'Show All',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
         ],
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF0C1324), // Dark blue
-              Color(0xFF131A2D), // Slightly lighter dark blue
-            ],
+      body: Stack(
+        children: [
+          // Background paper texture
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage("assets/paper_texture.jpg"),
+                fit: BoxFit.cover,
+                opacity: 0.8,
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Consumer<UserDataProvider>(
-            builder: (context, userDataProvider, child) {
-              if (userDataProvider.isLoading) {
-                return const Center(
-                    child: CircularProgressIndicator(color: Colors.white));
+          Consumer<UserDataProvider>(
+            builder: (context, provider, child) {
+              if (provider.isLoading) {
+                return const Center(child: CircularProgressIndicator());
               }
 
-              // Use this sample data for now
-              final allReflections = [
-                {
-                  'timestamp': DateTime.now().toIso8601String(),
-                  'mood_score': 8,
-                  'text':
-                      'Today was a great day! I felt very productive and happy. I had a lot of energy and was able to accomplish all my tasks. I also spent some quality time with my friends, which made me feel grateful and content. Looking forward to tomorrow!',
-                },
-                {
-                  'timestamp': DateTime.now()
-                      .subtract(Duration(days: 1))
-                      .toIso8601String(),
-                  'mood_score': 5,
-                  'text':
-                      'I felt a bit stressed at work, but managed to get through it. The deadline for the project is approaching, so there\'s a lot of pressure. I tried some breathing exercises to stay calm, and it helped a little. I hope tomorrow is a bit more relaxed.',
-                },
-                {
-                  'timestamp': DateTime.now()
-                      .subtract(Duration(days: 2))
-                      .toIso8601String(),
-                  'mood_score': 3,
-                  'text':
-                      'I was feeling down today, but I talked to a friend and it helped. The weather has been gloomy, and it\'s affecting my mood. I\'m going to try to get some sunlight tomorrow to see if it helps.',
-                },
-                {
-                  'timestamp': DateTime.now()
-                      .subtract(Duration(days: 3))
-                      .toIso8601String(),
-                  'mood_score': 9,
-                  'text':
-                      'Had an amazing weekend trip. Feeling grateful and full of energy! The change of scenery was exactly what I needed. I feel refreshed and ready to take on the week.',
-                },
-                {
-                  'timestamp': DateTime.now()
-                      .subtract(Duration(days: 4))
-                      .toIso8601String(),
-                  'mood_score': 6,
-                  'text':
-                      'A quiet day at home. Spent some time reading and relaxing. It was nice. I appreciate the slow pace and the opportunity to just be. Sometimes, doing nothing is the best thing you can do for yourself.',
-                },
-              ];
-
-              final reflections = userDataProvider.dailyReflections.isNotEmpty
-                  ? userDataProvider.dailyReflections
-                  : allReflections;
-
-              final displayedReflections = _isShowingAll
-                  ? reflections.where((entry) {
-                      final entryDate = DateTime.parse(entry['timestamp']);
-                      return DateTime.now().difference(entryDate).inDays < 7;
-                    }).toList()
-                  : reflections.where((entry) {
-                      final entryDate = DateTime.parse(entry['timestamp']);
-                      return entryDate.year == _selectedDate.year &&
-                          entryDate.month == _selectedDate.month &&
-                          entryDate.day == _selectedDate.day;
-                    }).toList();
-
-              if (displayedReflections.isEmpty) {
-                return Center(
+              if (_sortedDates.isEmpty) {
+                return const Center(
                   child: Text(
-                    'No journal entries for this period.',
+                    'Your journal is empty.\nStart by writing your first entry!',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey[400], fontSize: 16),
+                    style: TextStyle(fontSize: 18, color: Colors.black54),
                   ),
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.all(16.0),
-                itemCount: displayedReflections.length,
-                itemBuilder: (context, index) {
-                  final entry = displayedReflections[index];
-                  return _buildJournalCard(context, entry);
-                },
+              return Column(
+                children: [
+                  _buildDateHeader(),
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: _sortedDates.length,
+                      itemBuilder: (context, index) {
+                        final date = _sortedDates[index];
+                        final entriesForDay = _groupedEntries[date]!;
+                        return _JournalPage(entries: entriesForDay);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20), // Bottom padding
+                ],
               );
             },
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildJournalCard(BuildContext context, Map<String, dynamic> entry) {
-    final DateTime date = DateTime.parse(entry['timestamp']);
-    final int moodScore = entry['mood_score'] ?? 5;
-    final String moodText = _getMoodText(moodScore);
-    final Color moodColor = _getMoodColor(moodScore);
-    final String entryText = entry['text'];
+  Widget _buildDateHeader() {
+    if (_sortedDates.isEmpty) return const SizedBox.shrink();
 
-    return GestureDetector(
-      onTap: () {
-        _showFullEntryModal(context, date, moodText, moodColor, entryText);
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16.0),
-        padding: const EdgeInsets.all(16.0),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(16.0),
-          border: Border.all(
-            color: moodColor.withOpacity(0.5),
-            width: 1.0,
+    final currentDate = _sortedDates[_currentPageIndex];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon:
+                const Icon(Icons.arrow_back_ios_new, color: Color(0xFF5A4C3D)),
+            onPressed: _currentPageIndex < _sortedDates.length - 1
+                ? () => _pageController.previousPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    )
+                : null,
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Text(
+            DateFormat.yMMMMd().format(currentDate), // "October 19, 2025"
+            style: GoogleFonts.merriweather(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF3C2E20),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.arrow_forward_ios_rounded,
+                color: Color(0xFF5A4C3D)),
+            onPressed: _currentPageIndex > 0
+                ? () => _pageController.nextPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    )
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Color _getMoodColor(double score) {
+  if (score >= 0.25) return Colors.green.shade600; // Positive
+  if (score <= -0.25) return Colors.red.shade400; // Negative
+  return Colors.grey.shade500; // Neutral
+}
+
+// --- HELPER WIDGET FOR A SINGLE JOURNAL PAGE ---
+class _JournalPage extends StatelessWidget {
+  final List<JournalEntry> entries;
+  const _JournalPage({required this.entries});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+      itemCount: entries.length,
+      itemBuilder: (context, index) {
+        final entry = entries[index];
+        final moodColor = _getMoodColor(entry.moodScore);
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 24.0),
+          // Use an IntrinsicHeight to ensure the side bar stretches correctly
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  DateFormat('MMM d, yyyy').format(date),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                // 1. Colored Mood Side Bar
+                Container(
+                  width: 5.0,
+                  decoration: BoxDecoration(
+                    color: moodColor,
+                    borderRadius: BorderRadius.circular(5),
                   ),
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: moodColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    moodText,
-                    style: TextStyle(color: moodColor, fontSize: 12),
+                const SizedBox(width: 16.0),
+                // 2. Main Entry Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header with Mood Tag and Timestamp/Score
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Mood Tag Chip
+                          Chip(
+                            label: Text(
+                              entry.moodTag,
+                              style: TextStyle(
+                                color: moodColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                            backgroundColor: moodColor.withOpacity(0.15),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            side: BorderSide.none,
+                          ),
+                          const Spacer(),
+                          // Timestamp and Score
+                          Text(
+                            "${DateFormat.jm().format(entry.timestamp)} • Score: ${entry.moodScore.toStringAsFixed(2)}",
+                            style: GoogleFonts.roboto(
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF5A4C3D).withOpacity(0.8),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12.0),
+                      // Journal Text
+                      Text(
+                        entry.text,
+                        style: GoogleFonts.merriweather(
+                          fontSize: 16,
+                          height: 1.7, // Line spacing
+                          color: const Color(0xFF3C2E20),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12.0),
-            Text(
-              entryText.length > 100
-                  ? '${entryText.substring(0, 100)}...'
-                  : entryText,
-              style: TextStyle(color: Colors.grey[300], fontSize: 14),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showFullEntryModal(BuildContext context, DateTime date, String mood,
-      Color color, String text) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF131A2D),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    DateFormat('MMM d, yyyy').format(date),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      mood,
-                      style: TextStyle(color: color, fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Text(
-                text,
-                style: TextStyle(color: Colors.grey[300], fontSize: 16),
-              ),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close'),
-                ),
-              ),
-            ],
           ),
         );
       },
     );
-  }
-
-  String _getMoodText(int moodScore) {
-    if (moodScore >= 8) return 'Happy';
-    if (moodScore >= 6) return 'Content';
-    if (moodScore >= 4) return 'Neutral';
-    if (moodScore >= 2) return 'Sad';
-    return 'Very Sad';
-  }
-
-  Color _getMoodColor(int moodScore) {
-    if (moodScore >= 8) return Colors.green;
-    if (moodScore >= 6) return Colors.lightGreen;
-    if (moodScore >= 4) return Colors.orange;
-    if (moodScore >= 2) return Colors.red;
-    return Colors.deepOrange;
   }
 }
