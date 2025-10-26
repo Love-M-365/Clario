@@ -1,4 +1,3 @@
-
 import os
 import json
 import re # For parsing Gemini response
@@ -23,6 +22,12 @@ PROJECT_ID = "clario-f60b0" # Your Project ID
 LOCATION = "us-central1"
 GEMINI_MODEL_CHAT = "gemini-pro" # Model for chat
 GEMINI_MODEL_ANALYSIS = "gemini-pro"# Model for sentiment analysis
+
+# --- NEW ADDITION: Secret for Daily Quote Cron Job ---
+# A secret key to prevent unauthorized calls to the cron job
+# Set this as an environment variable 'DAILY_QUOTE_SECRET' in your deployment
+CRON_SECRET = os.environ.get("DAILY_QUOTE_SECRET", "REPLACE_THIS_WITH_A_REAL_SECRET")
+# --- END NEW ADDITION ---
 
 MAX_RECENT_HISTORY = 10 # How many turns of recent history to include in chat prompt
 
@@ -243,7 +248,7 @@ def analyze_sentiment_with_gemini(text_content):
         return {"score": 0.0, "tag": "Neutral"}
 
 
-# --- Cloud Function: analyzeMood (No changes needed here, relies on fixed helper) ---
+# --- Cloud Function: analyzeMood (Keep as is) ---
 @functions_framework.http
 def analyzeMood(req):
     """HTTP Cloud Function: Analyzes journal entry mood using Gemini. Requires Auth."""
@@ -273,7 +278,8 @@ def analyzeMood(req):
         # This catches errors *within* analyzeMood, not necessarily in the helper
         print(f"Unexpected error in analyzeMood function: {e}")
         return ("Internal Server Error", 500, headers)
-# --- Cloud Function: generateAvatar (Keep as is - uses Vertex AI SDK) ---
+
+# --- Cloud Function: generateAvatar (Keep as is) ---
 @functions_framework.http
 def generateAvatar(req):
     """Generates an avatar using Vertex AI Imagen and returns it as base64."""
@@ -311,7 +317,7 @@ def generateAvatar(req):
         return (jsonify({"error": f"Internal server error during image generation: {str(e)}"}), 500, headers)
 
 
-# --- Flask Routes (Keep as is, now /chat uses Gemini) ---
+# --- Flask Routes (Keep as is) ---
 @app.route("/chat", methods=["POST"])
 def chat():
     """Flask Route: Handles general chat interactions using Gemini."""
@@ -372,10 +378,149 @@ def onboarding():
         return jsonify({"status": "error", "message": "An internal server error occurred"}), 500
 
 
+
+# --- Cloud Function: processSensorData (Keep as is) ---
+@functions_framework.http
+def processSensorData(req):
+    """
+    HTTP Cloud Function that receives sensor or app usage data,
+    analyzes it, and stores reminder/notification info in Firestore.
+    """
+    decoded_token = verify_token(req)
+    if not decoded_token:
+        return ("Unauthorized", 401)
+
+    if req.method == "OPTIONS":  # Handle CORS
+        headers = {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Max-Age": "3600"
+        }
+        return ("", 204, headers)
+    headers = {"Access-Control-Allow-Origin": "*"}
+
+    if not req.is_json:
+        return ("Request must be JSON", 400, headers)
+
+    try:
+        payload = req.get_json()
+        user_id = decoded_token["uid"]
+
+        # Example: {"type": "screen_time", "app": "Instagram", "minutes": 50}
+        event_type = payload.get("type")
+        app_name = payload.get("app")
+        minutes = float(payload.get("minutes", 0))
+
+        if event_type == "screen_time":
+            if minutes > 30:
+                message = f"You’ve spent {int(minutes)} mins on {app_name}. Maybe take a short break?"
+                db_firestore.collection("users").document(user_id).collection("notifications").add({
+                    "title": "Mindful Reminder",
+                    "message": message,
+                    "timestamp": datetime.now(timezone.utc),
+                    "type": "screen_time",
+                    "app": app_name,
+                    "read": False
+                })
+                print(f"Notification created for user {user_id}: {message}")
+                return (jsonify({"status": "ok", "notification": message}), 200, headers)
+            else:
+                print(f"No notification needed for {app_name} ({minutes} mins).")
+                return (jsonify({"status": "ok", "notification": None}), 200, headers)
+
+        else:
+            print(f"Unhandled event type: {event_type}")
+            return (jsonify({"status": "ignored", "message": "Unknown event type"}), 200, headers)
+
+    except Exception as e:
+        print(f"Error in processSensorData: {e}")
+        return (jsonify({"error": str(e)}), 500, headers)
+
+# --- NEW ADDITION: Daily Quote Generation Function ---
+@functions_framework.http
+def updateDailyQuote(req):
+    """
+    HTTP Cloud Function: Generates a daily quote using Vertex AI (no API key needed)
+    and saves it to Firestore.
+    Intended to be called by Cloud Scheduler.
+    Requires a 'secret' query parameter to run for security.
+    """
+    
+    # --- Security Check ---
+    # We still need this secret to protect the public function URL
+    provided_secret = req.args.get("secret")
+    if provided_secret != CRON_SECRET:
+        print(f"Unauthorized attempt to run updateDailyQuote. Provided secret: '{provided_secret}'")
+        return ("Unauthorized", 401)
+
+    # Handle CORS preflight (good practice)
+    if req.method == "OPTIONS":
+        headers = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "3600"}
+        return ("", 204, headers)
+    headers = {"Access-Control-Allow-Origin": "*"}
+
+    print("Daily quote update job started (using Vertex AI)...")
+
+    try:
+        # --- Initialize Vertex AI ---
+        # This uses your project's service account (like gauth) - NO API KEY!
+        vertexai.init(project=PROJECT_ID, location=LOCATION)
+        
+        # Use the model you already have defined
+        model = GenerativeModel(GEMINI_MODEL_ANALYSIS) 
+        
+        prompt = (
+            "You are an assistant that provides one inspirational quote for mental wellness. "
+            "Provide a short, insightful, and supportive quote. "
+            "Format the output strictly as JSON: {\"text\": \"QUOTE_TEXT\", \"author\": \"AUTHOR_NAME\"}\n\n"
+            "JSON Output:"
+        )
+
+        # Generate content using the Vertex AI SDK
+        response = model.generate_content(prompt)
+
+        if not response.candidates:
+            print("WARN: Daily quote Vertex AI response blocked or empty.")
+            return ("Gemini response was blocked or empty", 500, headers)
+
+        response_text = response.text.strip()
+        print(f"Daily quote raw response: {response_text}")
+
+        # Use the same robust JSON parsing
+        match = re.search(r"\{.*\}", response_text, re.DOTALL)
+        if not match:
+            raise ValueError("No JSON object found in the quote response.")
+        
+        json_string = match.group(0)
+        quote_data = json.loads(json_string)
+
+        if "text" not in quote_data or "author" not in quote_data:
+            raise ValueError(f"Parsed JSON has incorrect structure: {quote_data}")
+
+        quote_data["updated_at"] = datetime.now(timezone.utc)
+
+        # Save to Firestore (same as before)
+        doc_ref = db_firestore.collection("config").document("dailyQuote")
+        doc_ref.set(quote_data)
+
+        print(f"Successfully saved daily quote to Firestore: {quote_data['text']}")
+        return (jsonify({"status": "success", "quote": quote_data}), 200, headers)
+
+    except Exception as e:
+        print(f"ERROR in updateDailyQuote (Vertex AI): {e}")
+        return (jsonify({"status": "error", "message": str(e)}), 500, headers)
+
+
 # ------------------ Entry for Local Flask Development ------------------
 if __name__ == "__main__":
     print("Starting Flask server for local development...")
     # Make sure GOOGLE_API_KEY is set in your local environment for testing
     if not os.environ.get("GOOGLE_API_KEY"):
          print("WARNING: GOOGLE_API_KEY environment variable not set for local testing.")
+    # --- NEW: Also check for the cron secret ---
+    if not os.environ.get("DAILY_QUOTE_SECRET"):
+         print("WARNING: DAILY_QUOTE_SECRET environment variable not set for local testing. Using default.")
+    # --- END NEW ---
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)), debug=True)
+

@@ -22,6 +22,7 @@ import '../screens/home/ai_chat_screen.dart';
 import '../screens/home/journal_entry_screen.dart';
 import '../screens/home/relation_map_screen.dart';
 import '../screens/avatar_prompt_screen.dart';
+import '../screens/debug_monitor.dart';
 
 final GoRouter _router = GoRouter(
   initialLocation: '/',
@@ -105,6 +106,10 @@ final GoRouter _router = GoRouter(
         GoRoute(
           path: 'avatar-prompt', // Relative to settings path
           builder: (context, state) => const AvatarPromptScreen(),
+        ),
+        GoRoute(
+          path: 'debug-dashboard', // Relative to settings path
+          builder: (context, state) => const DebugMonitorScreen(),
         ),
       ],
     ),

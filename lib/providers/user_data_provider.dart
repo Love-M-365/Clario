@@ -118,8 +118,14 @@ class UserDataProvider with ChangeNotifier {
 
   bool _isLoading = false; // General loading state
   String? _errorMessage; // Stores last error message
+  // --- New State ---
+  List<Map<String, dynamic>> _sensorData = []; // Stores step/shake events
+  List<Map<String, dynamic>> _appUsageData = []; // Stores app usage info
+  String? _dailyAIMessage; // Notification message from AI
 
-  // --- Getters ---
+  List<Map<String, dynamic>> get sensorData => _sensorData;
+  List<Map<String, dynamic>> get appUsageData => _appUsageData;
+  String? get dailyAIMessage => _dailyAIMessage;
   ClarioUser? get user => _user;
   List<JournalEntry> get journalEntries => _journalEntries;
   List<Map<String, dynamic>> get dailyReflections => _dailyReflections;
@@ -143,6 +149,93 @@ class UserDataProvider with ChangeNotifier {
   // --- Core Data Fetching ---
 
   /// Fetches essential user data concurrently.
+  ///
+
+  /// Logs sensor data (steps, shakes)
+  Future<void> logSensorData({
+    required int steps,
+    required bool isShakeDetected,
+  }) async {
+    final firebaseUser = _auth.currentUser;
+    if (firebaseUser == null) return;
+
+    final data = {
+      'userId': firebaseUser.uid,
+      'steps': steps,
+      'isShakeDetected': isShakeDetected,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    try {
+      await _dbRef
+          .child("users/${firebaseUser.uid}/sensorData")
+          .push()
+          .set(data);
+      _sensorData.insert(0, data);
+      notifyListeners();
+    } catch (e) {
+      print('ERROR logging sensor data: $e');
+    }
+  }
+
+  /// Logs app usage (screen time per app)
+  Future<void> logAppUsage({
+    required String appName,
+    required double minutes,
+  }) async {
+    final firebaseUser = _auth.currentUser;
+    if (firebaseUser == null) return;
+
+    final data = {
+      'userId': firebaseUser.uid,
+      'appName': appName,
+      'minutes': minutes,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    try {
+      await _dbRef.child("users/${firebaseUser.uid}/appUsage").push().set(data);
+      _appUsageData.insert(0, data);
+      notifyListeners();
+    } catch (e) {
+      print('ERROR logging app usage: $e');
+    }
+  }
+
+  /// Fetches AI-generated daily reminders/insights from Cloud Function
+  Future<void> fetchDailyAIMessage() async {
+    final firebaseUser = _auth.currentUser;
+    if (firebaseUser == null) return;
+
+    final idToken = await _getIdToken();
+    if (idToken == null) return;
+
+    const String functionUrl =
+        "https://YOUR_CLOUD_FUNCTION_URL/getDailyMessage"; // Replace with your function
+
+    try {
+      final response = await _dio.get(
+        functionUrl,
+        options: Options(
+          headers: {'Authorization': 'Bearer $idToken'},
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        _dailyAIMessage = response.data['message'] as String?;
+        if (_dailyAIMessage != null) {
+          // Trigger local notification here if needed
+          // Example: NotificationService.show(_dailyAIMessage!);
+        }
+        notifyListeners();
+      } else {
+        print("ERROR fetching AI message: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("EXCEPTION fetching AI message: $e");
+    }
+  }
+
   Future<void> fetchUserData() async {
     final firebaseUser = _auth.currentUser;
     if (firebaseUser == null) {

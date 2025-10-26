@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="default_web_client_id" translatable="false">1045577266956-r43has1sdb74kmh6d5bugn0n0rq0cbb4.apps.googleusercontent.com</string>
+    <string name="gcm_defaultSenderId" translatable="false">1045577266956</string>
+    <string name="google_api_key" translatable="false">AIzaSyBy8jY6Y_wexM_F4ACe0nunxC5b7m5Jpi0</string>
+    <string name="google_app_id" translatable="false">1:1045577266956:android:2f1a7b069cdc40192c3b29</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyBy8jY6Y_wexM_F4ACe0nunxC5b7m5Jpi0</string>
+    <string name="google_storage_bucket" translatable="false">clario-f60b0.firebasestorage.app</string>
+    <string name="project_id" translatable="false">clario-f60b0</string>
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+</resources>

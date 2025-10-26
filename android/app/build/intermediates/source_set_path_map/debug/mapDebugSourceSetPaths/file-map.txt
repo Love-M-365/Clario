@@ -1,0 +1,88 @@
+com.example.clario.app-debug-0 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_android-5.2.1\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-1 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-6.0.3\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-2 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\device_info_plus-11.5.0\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-3 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-6.0.2\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-4 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-4.2.0\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-5 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_database-12.0.1\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-6 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-13.0.1\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-7 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_local_notifications-17.2.4\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-8 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.30\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-9 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_tts-4.2.3\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-10 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\google_sign_in_android-6.2.1\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-11 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\health-13.1.4\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-12 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.13+1\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-13 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_android-2.2.18\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-14 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\pedometer-4.1.1\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-15 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\permission_handler_android-13.0.1\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-16 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\rive_common-0.4.15\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-17 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\sensors_plus-6.1.2\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-18 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_android-2.4.12\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-19 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\speech_to_text-7.3.0\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-20 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite_android-2.4.2+2\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-21 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\usage_stats-1.3.1\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-22 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\vibration-3.1.3\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-debug-23 C:\Users\devma\AppData\Local\Pub\Cache\hosted\pub.dev\workmanager_android-0.9.0+2\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.example.clario.app-jetified-window-java-1.2.0-24 D:\GradleCache\caches\transforms-4\12dfbb0350a8dd569a32672f26120f75\transformed\jetified-window-java-1.2.0\res
+com.example.clario.app-jetified-play-services-basement-18.8.0-25 D:\GradleCache\caches\transforms-4\1721f3e3fee72f666300a6bce56594ca\transformed\jetified-play-services-basement-18.8.0\res
+com.example.clario.app-jetified-lifecycle-runtime-ktx-2.7.0-26 D:\GradleCache\caches\transforms-4\1ce3ad6f606917c746ff8230df73dc28\transformed\jetified-lifecycle-runtime-ktx-2.7.0\res
+com.example.clario.app-jetified-credentials-play-services-auth-1.2.0-rc01-27 D:\GradleCache\caches\transforms-4\217bad4a1c267ad838e2d5bf73ad7fea\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\res
+com.example.clario.app-jetified-appcompat-resources-1.1.0-28 D:\GradleCache\caches\transforms-4\2439c6689212dff6df85de576083040d\transformed\jetified-appcompat-resources-1.1.0\res
+com.example.clario.app-jetified-lifecycle-process-2.7.0-29 D:\GradleCache\caches\transforms-4\2700e495a8818c22a3182e48d5a9df64\transformed\jetified-lifecycle-process-2.7.0\res
+com.example.clario.app-jetified-lifecycle-viewmodel-savedstate-2.7.0-30 D:\GradleCache\caches\transforms-4\30db277ff8585067a6ee8bc42391b17c\transformed\jetified-lifecycle-viewmodel-savedstate-2.7.0\res
+com.example.clario.app-sqlite-2.4.0-31 D:\GradleCache\caches\transforms-4\375a7dd8fb2610d5604c1477e8eca940\transformed\sqlite-2.4.0\res
+com.example.clario.app-jetified-datastore-preferences-core-release-32 D:\GradleCache\caches\transforms-4\39959eb97f9d0afd11b5730beeb43eef\transformed\jetified-datastore-preferences-core-release\res
+com.example.clario.app-jetified-core-common-2.0.3-33 D:\GradleCache\caches\transforms-4\40aa35a572c1f9aedfdb97c1a2a54a27\transformed\jetified-core-common-2.0.3\res
+com.example.clario.app-core-1.13.1-34 D:\GradleCache\caches\transforms-4\431910cdaffb121468d1ddcf1485d4e3\transformed\core-1.13.1\res
+com.example.clario.app-fragment-1.8.6-35 D:\GradleCache\caches\transforms-4\442de80bf9952fcbefb46d1216e45f83\transformed\fragment-1.8.6\res
+com.example.clario.app-jetified-lifecycle-viewmodel-ktx-2.7.0-36 D:\GradleCache\caches\transforms-4\4e9267ab5b42407cc5de30653e95dba0\transformed\jetified-lifecycle-viewmodel-ktx-2.7.0\res
+com.example.clario.app-jetified-ads-adservices-1.1.0-beta11-37 D:\GradleCache\caches\transforms-4\5420f814f6aab941051a543ca17fb72f\transformed\jetified-ads-adservices-1.1.0-beta11\res
+com.example.clario.app-recyclerview-1.0.0-38 D:\GradleCache\caches\transforms-4\5b5580fe1e76209af6a619f151dddaf1\transformed\recyclerview-1.0.0\res
+com.example.clario.app-jetified-window-1.2.0-39 D:\GradleCache\caches\transforms-4\5f5e3b260e7f806b95d2451d75d54084\transformed\jetified-window-1.2.0\res
+com.example.clario.app-jetified-activity-1.10.1-40 D:\GradleCache\caches\transforms-4\620b168578bfac78d2244aa808be4a84\transformed\jetified-activity-1.10.1\res
+com.example.clario.app-lifecycle-livedata-core-2.7.0-41 D:\GradleCache\caches\transforms-4\624229622f8ccd6489c6ab9bacf30ba7\transformed\lifecycle-livedata-core-2.7.0\res
+com.example.clario.app-lifecycle-livedata-2.7.0-42 D:\GradleCache\caches\transforms-4\647eaff3364c6ffcc6dcddc1ef83f13b\transformed\lifecycle-livedata-2.7.0\res
+com.example.clario.app-jetified-credentials-1.2.0-rc01-43 D:\GradleCache\caches\transforms-4\6564395b794d1e05a4fa6b897a837dac\transformed\jetified-credentials-1.2.0-rc01\res
+com.example.clario.app-jetified-annotation-experimental-1.4.1-44 D:\GradleCache\caches\transforms-4\70661fb1b72001be9052c29d7f60d866\transformed\jetified-annotation-experimental-1.4.1\res
+com.example.clario.app-jetified-core-1.0.0-45 D:\GradleCache\caches\transforms-4\7295baf6ddba79b412fb59fc333461f9\transformed\jetified-core-1.0.0\res
+com.example.clario.app-media-1.1.0-46 D:\GradleCache\caches\transforms-4\735a8ce32e18b7285249a2bf1d90ccc2\transformed\media-1.1.0\res
+com.example.clario.app-jetified-tracing-1.2.0-47 D:\GradleCache\caches\transforms-4\7e06a0413afdab44900533fc642269bc\transformed\jetified-tracing-1.2.0\res
+com.example.clario.app-room-runtime-2.6.1-48 D:\GradleCache\caches\transforms-4\83ca1e3688f5a9090d229b0e342d577b\transformed\room-runtime-2.6.1\res
+com.example.clario.app-browser-1.4.0-49 D:\GradleCache\caches\transforms-4\85386b3f325490d2f54a1d48bc3bee0d\transformed\browser-1.4.0\res
+com.example.clario.app-jetified-startup-runtime-1.1.1-50 D:\GradleCache\caches\transforms-4\8b71a6e9102ac3aab75d0274041bade0\transformed\jetified-startup-runtime-1.1.1\res
+com.example.clario.app-lifecycle-runtime-2.7.0-51 D:\GradleCache\caches\transforms-4\959c549de8251dd1086bd944767dee4e\transformed\lifecycle-runtime-2.7.0\res
+com.example.clario.app-jetified-play-services-base-18.5.0-52 D:\GradleCache\caches\transforms-4\96f6afab6df9b72001db459de553c4b0\transformed\jetified-play-services-base-18.5.0\res
+com.example.clario.app-jetified-profileinstaller-1.4.0-53 D:\GradleCache\caches\transforms-4\9ae64b150fdd3880211e97eda3584ebb\transformed\jetified-profileinstaller-1.4.0\res
+com.example.clario.app-core-runtime-2.2.0-54 D:\GradleCache\caches\transforms-4\9c16a9099afe2a695904f61087fe7957\transformed\core-runtime-2.2.0\res
+com.example.clario.app-jetified-play-services-auth-21.0.0-55 D:\GradleCache\caches\transforms-4\9c7d9b1d65136c40f51544b52be0eb7c\transformed\jetified-play-services-auth-21.0.0\res
+com.example.clario.app-work-runtime-2.10.2-56 D:\GradleCache\caches\transforms-4\a280805a3c2496d1887c3cc1df81ef82\transformed\work-runtime-2.10.2\res
+com.example.clario.app-lifecycle-viewmodel-2.7.0-57 D:\GradleCache\caches\transforms-4\a63d5c939dcbbf082caddf1b1c960ce9\transformed\lifecycle-viewmodel-2.7.0\res
+com.example.clario.app-slidingpanelayout-1.2.0-58 D:\GradleCache\caches\transforms-4\a8734144a16b309a0155b41c9e1e9666\transformed\slidingpanelayout-1.2.0\res
+com.example.clario.app-appcompat-1.1.0-59 D:\GradleCache\caches\transforms-4\ad72bf44a75ce7d1c7e39fea5d5be9fd\transformed\appcompat-1.1.0\res
+com.example.clario.app-jetified-activity-ktx-1.10.1-60 D:\GradleCache\caches\transforms-4\ae9ae0040574b04843db8d05aaaf0048\transformed\jetified-activity-ktx-1.10.1\res
+com.example.clario.app-jetified-tracing-ktx-1.2.0-61 D:\GradleCache\caches\transforms-4\b1305ffe100b5af107b3bd2e93a965d6\transformed\jetified-tracing-ktx-1.2.0\res
+com.example.clario.app-jetified-connect-client-1.1.0-alpha11-62 D:\GradleCache\caches\transforms-4\b17863670145ba01ff6fa24b32fc77be\transformed\jetified-connect-client-1.1.0-alpha11\res
+com.example.clario.app-jetified-datastore-preferences-release-63 D:\GradleCache\caches\transforms-4\b355ab6b0db4f913e2cc58b6d1f8bc50\transformed\jetified-datastore-preferences-release\res
+com.example.clario.app-preference-1.2.1-64 D:\GradleCache\caches\transforms-4\b64530422d98b2f5c25a1be9b3b20e6b\transformed\preference-1.2.1\res
+com.example.clario.app-jetified-lifecycle-service-2.7.0-65 D:\GradleCache\caches\transforms-4\bbc37f4e060507587f84d5693ab667f2\transformed\jetified-lifecycle-service-2.7.0\res
+com.example.clario.app-jetified-core-ktx-1.13.1-66 D:\GradleCache\caches\transforms-4\bff2ce875374545b9e0a8fca7eeb8cb7\transformed\jetified-core-ktx-1.13.1\res
+com.example.clario.app-jetified-fragment-ktx-1.8.6-67 D:\GradleCache\caches\transforms-4\c42d8f3c55597eb0275c1de58d63fb22\transformed\jetified-fragment-ktx-1.8.6\res
+com.example.clario.app-jetified-savedstate-ktx-1.2.1-68 D:\GradleCache\caches\transforms-4\c803010c54dccbb9112e4a190de69b27\transformed\jetified-savedstate-ktx-1.2.1\res
+com.example.clario.app-transition-1.4.1-69 D:\GradleCache\caches\transforms-4\cabe86f48371fe32d8a175991ea06fc0\transformed\transition-1.4.1\res
+com.example.clario.app-jetified-ads-adservices-java-1.1.0-beta11-70 D:\GradleCache\caches\transforms-4\cbc96b6b4727ecc1c09d824fc048f544\transformed\jetified-ads-adservices-java-1.1.0-beta11\res
+com.example.clario.app-jetified-firebase-common-22.0.1-71 D:\GradleCache\caches\transforms-4\cd7a0f6422e273274ac576573cda2b7d\transformed\jetified-firebase-common-22.0.1\res
+com.example.clario.app-jetified-lifecycle-livedata-core-ktx-2.7.0-72 D:\GradleCache\caches\transforms-4\ce4cb1a217514a970f4f2b6dce0f9530\transformed\jetified-lifecycle-livedata-core-ktx-2.7.0\res
+com.example.clario.app-jetified-savedstate-1.2.1-73 D:\GradleCache\caches\transforms-4\d3355491ce719bde63a85039890451a9\transformed\jetified-savedstate-1.2.1\res
+com.example.clario.app-jetified-datastore-core-release-74 D:\GradleCache\caches\transforms-4\d36333003304de60e96468baff16aa1b\transformed\jetified-datastore-core-release\res
+com.example.clario.app-jetified-core-viewtree-1.0.0-75 D:\GradleCache\caches\transforms-4\d3744f428a48de5c2e191b4f9ea9b49e\transformed\jetified-core-viewtree-1.0.0\res
+com.example.clario.app-sqlite-framework-2.4.0-76 D:\GradleCache\caches\transforms-4\d9b3e2494267fac2b99b6e3d797c6075\transformed\sqlite-framework-2.4.0\res
+com.example.clario.app-jetified-room-ktx-2.6.1-77 D:\GradleCache\caches\transforms-4\ee0cdada3acb6776e0aeaaff0faa7358\transformed\jetified-room-ktx-2.6.1\res
+com.example.clario.app-jetified-datastore-release-78 D:\GradleCache\caches\transforms-4\fa9bf4866df7b31ea4acf7679e23df34\transformed\jetified-datastore-release\res
+com.example.clario.app-coordinatorlayout-1.0.0-79 D:\GradleCache\caches\transforms-4\fcef1505709988de4d8a8f43cc3dbf41\transformed\coordinatorlayout-1.0.0\res
+com.example.clario.app-pngs-80 D:\OneDrive\Documents\Desktop\Clario the final\Clario\android\app\build\generated\res\pngs\debug
+com.example.clario.app-res-81 D:\OneDrive\Documents\Desktop\Clario the final\Clario\android\app\build\generated\res\processDebugGoogleServices
+com.example.clario.app-resValues-82 D:\OneDrive\Documents\Desktop\Clario the final\Clario\android\app\build\generated\res\resValues\debug
+com.example.clario.app-packageDebugResources-83 D:\OneDrive\Documents\Desktop\Clario the final\Clario\android\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.example.clario.app-packageDebugResources-84 D:\OneDrive\Documents\Desktop\Clario the final\Clario\android\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.example.clario.app-debug-85 D:\OneDrive\Documents\Desktop\Clario the final\Clario\android\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.example.clario.app-debug-86 D:\OneDrive\Documents\Desktop\Clario the final\Clario\android\app\src\debug\res
+com.example.clario.app-main-87 D:\OneDrive\Documents\Desktop\Clario the final\Clario\android\app\src\main\res

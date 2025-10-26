@@ -95,7 +95,7 @@ class SettingsScreen extends StatelessWidget {
                               subtitle: themeProvider
                                   .getThemeName(themeProvider.currentTheme),
                               onTap: () {
-                                context.go('/home/settings/theme-selection');
+                                context.go('/home/debug-dashboard');
                               },
                             ),
                           ]),

@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.example.clario.app-mergeDebugResources-83:/values-h720dp-v13/values-h720dp-v13.xml",
+            "map": [
+                {
+                    "source": "D:\\GradleCache\\caches\\transforms-4\\ad72bf44a75ce7d1c7e39fea5d5be9fd\\transformed\\appcompat-1.1.0\\res\\values-h720dp-v13\\values-h720dp-v13.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "66",
+                        "endOffsets": "117"
+                    }
+                }
+            ]
+        }
+    ]
+}

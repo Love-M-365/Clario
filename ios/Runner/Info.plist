@@ -22,7 +22,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>New Clario</string>
+	<string>Clario</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -68,6 +68,11 @@
     <string>This app uses speech recognition to turn your voice into a journal entry.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>This app needs microphone access to enable voice-based journaling.</string>
+	<key>NSMotionUsageDescription</key>
+<string>Clario uses motion sensors to encourage healthy activity.</string>
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>Needed for step tracking.</string>
+
 
 </dict>
 </plist>

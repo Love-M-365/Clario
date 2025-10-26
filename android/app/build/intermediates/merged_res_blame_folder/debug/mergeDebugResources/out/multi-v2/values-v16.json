@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.example.clario.app-mergeDebugResources-83:/values-v16/values-v16.xml",
+            "map": [
+                {
+                    "source": "D:\\GradleCache\\caches\\transforms-4\\ad72bf44a75ce7d1c7e39fea5d5be9fd\\transformed\\appcompat-1.1.0\\res\\values-v16\\values-v16.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "5",
+                        "endColumns": "12",
+                        "endOffsets": "223"
+                    }
+                }
+            ]
+        }
+    ]
+}
