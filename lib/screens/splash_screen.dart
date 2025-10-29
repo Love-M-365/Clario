@@ -64,7 +64,7 @@ class _SplashScreenState extends State<SplashScreen>
       } else {
         // If onboarding is completed, check the user's login status
         if (authProvider.isLoggedIn) {
-          context.go('/home');
+          context.go('/');
         } else {
           context.go('/login');
         }

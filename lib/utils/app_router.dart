@@ -24,6 +24,9 @@ import '../screens/home/relation_map_screen.dart';
 import '../screens/avatar_prompt_screen.dart';
 import '../screens/debug_monitor.dart';
 
+import '../screens/empty_chair_tutorial_screen.dart';
+import '../screens/daily_quote_splash_screen.dart';
+
 final GoRouter _router = GoRouter(
   initialLocation: '/',
   routes: [
@@ -32,6 +35,14 @@ final GoRouter _router = GoRouter(
       name: 'splash',
       builder: (context, state) => const SplashScreen(),
     ),
+
+    // --- NEW ROUTE ---
+    GoRoute(
+      path: '/quote-splash',
+      name: 'quote_splash',
+      builder: (context, state) => const DailyQuoteSplashScreen(),
+    ),
+
     GoRoute(
       path: '/onboarding',
       name: 'onboarding',
@@ -66,6 +77,10 @@ final GoRouter _router = GoRouter(
           path: 'empty-chair-intro',
           name: 'empty_chair_intro',
           builder: (context, state) => const EmptyChairIntroScreen(),
+        ),
+        GoRoute(
+          path: '/tutorial-empty-chair',
+          builder: (context, state) => const EmptyChairTutorialScreen(),
         ),
         GoRoute(
           path: 'clario-AI',
@@ -124,8 +139,11 @@ final GoRouter _router = GoRouter(
         state.matchedLocation == '/register';
     final isOnboarding = state.matchedLocation == '/onboarding';
 
+    // --- NEW ---
+    final isQuoteSplash = state.matchedLocation == '/quote-splash';
+
     // Wait for auth state to be ready
-    if (!isReady) return null;
+    if (!isReady) return null; // User stays on '/' (SplashScreen)
 
     // If not logged in:
     // - If on onboarding or an auth page, allow.
@@ -136,9 +154,21 @@ final GoRouter _router = GoRouter(
     }
 
     // If logged in:
-    // - If on an auth page, redirect to home.
     if (isLoggedIn) {
+      // - If on an auth page, redirect to home.
       if (isAuthPage) return '/home';
+
+      // --- NEW ---
+      // - If at the root splash ('/'), redirect to the quote splash.
+      if (isStarting) {
+        return '/quote-splash';
+      }
+
+      // --- NEW ---
+      // - If on the quote splash, allow.
+      if (isQuoteSplash) {
+        return null;
+      }
     }
 
     // No redirection needed

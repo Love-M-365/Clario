@@ -11,6 +11,7 @@ from google.cloud import language_v1 # For old analyzeMood helper (optional fall
 
 # --- Imports for Gemini ---
 import google.generativeai as genai
+from vertexai.generative_models import GenerativeModel
 
 # --- Imports for generateAvatar ---
 import vertexai

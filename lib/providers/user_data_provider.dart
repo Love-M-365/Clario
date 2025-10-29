@@ -116,6 +116,9 @@ class UserDataProvider with ChangeNotifier {
   List<Relation> _relations = []; // State for Relations feature
   bool _isRelationsLoading = false; // Loading state for Relations
 
+  // inside UserDataProvider class
+  String? _currentAvatarUrl;
+
   bool _isLoading = false; // General loading state
   String? _errorMessage; // Stores last error message
   // --- New State ---
@@ -139,12 +142,7 @@ class UserDataProvider with ChangeNotifier {
 
   /// Returns the URL for the avatar matching the current emotion.
   /// Falls back to 'neutral' or a local placeholder asset if not found.
-  String get currentAvatarUrl {
-    // Prioritize current emotion, then neutral, then fallback asset
-    return _avatarUrls[_currentEmotion] ??
-        _avatarUrls['neutral'] ??
-        'assets/avatars/default_neutral.jpg'; // Ensure this matches your asset file
-  }
+  String get currentAvatarUrl => _currentAvatarUrl ?? '';
 
   // --- Core Data Fetching ---
 
@@ -706,10 +704,6 @@ class UserDataProvider with ChangeNotifier {
   // --- Utility Methods ---
 
   /// Returns the appropriate avatar URL based on the current emotion.
-  String getMoodAvatarAsset() {
-    // Use the dynamic URL getter now
-    return currentAvatarUrl;
-  }
 
   /// Returns a color representing the current mood score.
   Color getMoodColor() {
@@ -742,6 +736,53 @@ class UserDataProvider with ChangeNotifier {
       print(
           "INFO: Current emotion set to: $_currentEmotion (from score $moodScore)");
       notifyListeners(); // Update UI if emotion changes
+    }
+  }
+
+  Future<void> updateAvatarFromLatestJournal() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      final db = FirebaseDatabase.instance.ref();
+      final journalRef = db.child('users').child(uid).child('journals');
+      final snapshot = await journalRef.limitToLast(1).get();
+
+      if (snapshot.exists) {
+        // Get latest journal entry
+        final Map<dynamic, dynamic> latest =
+            (snapshot.children.first.value ?? {}) as Map<dynamic, dynamic>;
+
+        // ✅ Use 'moodTag' (like "happy", "sad", "neutral")
+        final String moodTag =
+            (latest['moodTag'] ?? 'neutral').toString().toLowerCase();
+
+        // ✅ Fetch user's avatar URLs from DB
+        final userRef = db.child('users').child(uid).child('avatarUrls');
+        final userSnapshot = await userRef.get();
+
+        if (userSnapshot.exists && userSnapshot.value is Map) {
+          final avatarMap =
+              Map<String, dynamic>.from(userSnapshot.value as Map);
+          final selectedUrl =
+              (avatarMap[moodTag] ?? avatarMap['neutral'])?.toString() ?? '';
+
+          if (selectedUrl.isNotEmpty) {
+            _currentAvatarUrl = selectedUrl;
+            _currentEmotion = moodTag;
+            print("✅ Avatar updated for mood: $moodTag -> $_currentAvatarUrl");
+            notifyListeners();
+          } else {
+            print("⚠️ No matching avatar found for mood: $moodTag");
+          }
+        } else {
+          print("⚠️ No avatarUrls found for user $uid.");
+        }
+      } else {
+        print("⚠️ No journal entries found for user $uid.");
+      }
+    } catch (e) {
+      print("❌ ERROR updating avatar from latest journal: $e");
     }
   }
 

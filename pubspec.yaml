@@ -101,6 +101,7 @@ flutter:
     - assets/quotes/
     - assets/avatars/
 
+
   fonts:
     - family: Poppins
       fonts:

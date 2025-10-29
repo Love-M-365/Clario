@@ -158,57 +158,83 @@ class _JournalEntryScreenState extends State<JournalEntryScreen>
     );
   }
 
-  // --- Save Journal Logic (Unchanged) ---
   Future<void> _saveJournal() async {
     if (_journalController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Journal can't be empty!")));
       return;
     }
+
     if (_isSaving) return;
+
     setState(() => _isSaving = true);
+
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("User not authenticated.");
-      final idToken = await user.getIdToken(true);
+
       final journalText = _journalController.text.trim();
-      const moodFunctionUrl = "https://analyzemood-6q2ddbi5pa-uc.a.run.app";
-      final response = await _dio.post(moodFunctionUrl,
-          data: {'text': journalText},
-          options: Options(headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $idToken'
-          }));
-      if (response.statusCode != 200)
-        throw Exception(
-            "Failed to analyze mood. Server returned ${response.statusCode}");
+
+      // ✅ Your new Cloud Run URL
+
+      // ✅ Get Firebase ID token to authenticate request
+      final idToken = await user.getIdToken(true);
+
+// ✅ Your Cloud Run URL (copy the exact deploy result URL)
+      const moodApiUrl =
+          "https://analyze-journal-1045577266956.us-central1.run.app/analyze-journal";
+
+      final response = await _dio.post(
+        moodApiUrl,
+        data: {
+          "journal_text": journalText,
+        },
+        options: Options(
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer $idToken", // ✅ Required for backend auth
+          },
+        ),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception("Mood analysis failed (code: ${response.statusCode})");
+      }
+
       final moodData = response.data;
-      final double moodScore = (moodData['score'] as num?)?.toDouble() ?? 0.0;
-      final String moodTag = moodData['tag'] ?? 'Neutral';
-      final journalEntry = {
+
+      final double moodScore =
+          (moodData['mood_score'] as num?)?.toDouble() ?? 50.0;
+      final String moodTag = moodData['mood_type'] ?? "neutral";
+
+      // ✅ Save to Firebase Realtime DB (same as before)
+      final dbRef = FirebaseDatabase.instance.ref("users/${user.uid}/journals");
+
+      await dbRef.push().set({
         'text': journalText,
         'timestamp': DateTime.now().toIso8601String(),
         'moodScore': moodScore,
-        'moodTag': moodTag
-      };
-      final dbRef = FirebaseDatabase.instance.ref("users/${user.uid}/journals");
-      await dbRef.push().set(journalEntry);
+        'moodTag': moodTag,
+      });
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Journal entry saved successfully!'),
-            backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Journal entry saved!"),
+            backgroundColor: Colors.green,
+          ),
+        );
         context.pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Error saving journal: ${e.toString()}'),
-            backgroundColor: Colors.red.shade600));
+          content: Text("Error: ${e.toString()}"),
+          backgroundColor: Colors.red.shade600,
+        ));
       }
     } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 

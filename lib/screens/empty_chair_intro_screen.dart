@@ -203,7 +203,7 @@ class _EmptyChairIntroScreenState extends State<EmptyChairIntroScreen>
           padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
           textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        onPressed: () => context.go('/home/chatbot'),
+        onPressed: () => context.go('/home/tutorial-empty-chair'),
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
