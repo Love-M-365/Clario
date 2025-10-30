@@ -64,15 +64,19 @@
 	<true/>
 </dict>
 <dict>
+   <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>UIApplicationSupportsIndirectInputEvents</key>
+    <true/>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>This app uses speech recognition to turn your voice into a journal entry.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>This app needs microphone access to enable voice-based journaling.</string>
-	<key>NSMotionUsageDescription</key>
-<string>Clario uses motion sensors to encourage healthy activity.</string>
-<key>NSLocationWhenInUseUsageDescription</key>
-<string>Needed for step tracking.</string>
+    <key>NSMotionUsageDescription</key>
+    <string>Clario uses motion sensors to encourage healthy activity.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Needed for step tracking.</string>
 
-
-</dict>
-</plist>
+</dict> </plist>

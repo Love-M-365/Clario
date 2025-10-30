@@ -16,7 +16,7 @@ class _DailyQuoteScreenState extends State<DailyQuoteScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  
+
   Map<String, dynamic>? _todaysQuote;
   bool _isLoading = true;
 
@@ -46,7 +46,7 @@ class _DailyQuoteScreenState extends State<DailyQuoteScreen>
 
     _loadTodaysQuote();
     _animationController.forward();
-    
+
     // Auto-navigate after 4 seconds
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) {
@@ -57,13 +57,15 @@ class _DailyQuoteScreenState extends State<DailyQuoteScreen>
 
   Future<void> _loadTodaysQuote() async {
     try {
-      final String response = await rootBundle.loadString('assets/quotes/mental_health_quotes.json');
+      final String response = await rootBundle
+          .loadString('assets/quotes/mental_health_quotes.json');
       final List<dynamic> quotes = json.decode(response);
-      
+
       // Use current day to get consistent daily quote
-      final int dayOfYear = DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays;
+      final int dayOfYear =
+          DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays;
       final int quoteIndex = dayOfYear % quotes.length;
-      
+
       setState(() {
         _todaysQuote = quotes[quoteIndex];
         _isLoading = false;
@@ -71,7 +73,8 @@ class _DailyQuoteScreenState extends State<DailyQuoteScreen>
     } catch (e) {
       setState(() {
         _todaysQuote = {
-          'quote': 'Every day is a new beginning. Take a deep breath and start again.',
+          'quote':
+              'Every day is a new beginning. Take a deep breath and start again.',
           'author': 'Anonymous'
         };
         _isLoading = false;
@@ -82,7 +85,8 @@ class _DailyQuoteScreenState extends State<DailyQuoteScreen>
   void _navigateToMainDashboard() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const MainDashboardScreen(),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const MainDashboardScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: animation,
@@ -119,7 +123,8 @@ class _DailyQuoteScreenState extends State<DailyQuoteScreen>
           ),
           child: SafeArea(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.white))
                 : AnimatedBuilder(
                     animation: _animationController,
                     builder: (context, child) {
@@ -147,7 +152,7 @@ class _DailyQuoteScreenState extends State<DailyQuoteScreen>
                                   ),
                                 ),
                                 const SizedBox(height: 40),
-                                
+
                                 // Quote text
                                 Text(
                                   _todaysQuote!['quote'],
@@ -160,7 +165,7 @@ class _DailyQuoteScreenState extends State<DailyQuoteScreen>
                                   textAlign: TextAlign.center,
                                 ),
                                 const SizedBox(height: 30),
-                                
+
                                 // Author
                                 Text(
                                   '— ${_todaysQuote!['author']}',
@@ -171,10 +176,11 @@ class _DailyQuoteScreenState extends State<DailyQuoteScreen>
                                   ),
                                 ),
                                 const SizedBox(height: 60),
-                                
+
                                 // Daily inspiration text
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 10),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(20),
@@ -189,7 +195,7 @@ class _DailyQuoteScreenState extends State<DailyQuoteScreen>
                                   ),
                                 ),
                                 const SizedBox(height: 40),
-                                
+
                                 // Tap to continue hint
                                 Text(
                                   'Tap anywhere to continue',

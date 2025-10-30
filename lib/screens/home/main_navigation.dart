@@ -53,7 +53,7 @@ class _MainNavigationState extends State<MainNavigation> {
       label: 'Journal',
     ),
     _BottomNavItem(
-      screen: const SleepScreen(),
+      screen: const SleepInputScreen(),
       icon: Icons.bedtime_rounded,
       label: 'Sleep',
     ),

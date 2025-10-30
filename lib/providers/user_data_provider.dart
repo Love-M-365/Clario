@@ -86,8 +86,8 @@ class Relation {
   factory Relation.fromJson(Map<String, dynamic> json) {
     return Relation(
       name: json['name'] as String? ?? 'Unknown',
-      sentiment: json['sentiment'] as String? ?? 'Neutral',
-      timesMentioned: json['times_mentioned'] as int? ?? 0,
+      sentiment: json['last_type'] ?? 'Neutral',
+      timesMentioned: json['times_mentioned'] ?? 0,
       lastMentioned: json['last_mentioned'] as String? ?? '',
     );
   }
@@ -313,7 +313,7 @@ class UserDataProvider with ChangeNotifier {
     }
   }
 
-  /// Fetches relation data from the external API.
+  /// Fetches relation data from the external AI backend (Cloud Run).
   Future<void> fetchRelations() async {
     final idToken = await _getIdToken();
     if (idToken == null) {
@@ -327,26 +327,29 @@ class UserDataProvider with ChangeNotifier {
     _isRelationsLoading = true;
     notifyListeners();
 
-    // TODO: Move API URL to a configuration file/environment variable
+    // ✅ Use your actual deployed Cloud Run base URL
     const String relationsApiUrl =
-        'https://clario-ai-1045577266956.us-central1.run.app';
+        'https://clario-ai-v2-1045577266956.us-central1.run.app';
 
     try {
+      // ✅ Correct endpoint (assuming your Flask AI has a /relations route)
       final response = await http.get(
         Uri.parse('$relationsApiUrl/relations'),
-        headers: {'Authorization': 'Bearer $idToken'},
+        headers: {
+          'Authorization': 'Bearer $idToken',
+          'Content-Type': 'application/json',
+        },
       );
 
       print('DEBUG: Relations API call status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        final dynamic data =
-            json.decode(response.body); // Use dynamic type first
+        final dynamic data = json.decode(response.body);
 
+        // ✅ Flexible handling for both List and Map formats
         if (data is Map<String, dynamic> && data['relations'] is List) {
           final List relationsList = data['relations'];
           _relations = relationsList
-              // Add error handling during parsing
               .map((item) {
                 try {
                   return Relation.fromJson(item as Map<String, dynamic>);
@@ -355,13 +358,28 @@ class UserDataProvider with ChangeNotifier {
                   return null;
                 }
               })
-              .whereType<Relation>() // Filter out nulls
+              .whereType<Relation>()
               .toList();
           print('DEBUG: Successfully parsed ${_relations.length} relations.');
+        } else if (data is List) {
+          // Some backends may directly return a list
+          _relations = data
+              .map((item) {
+                try {
+                  return Relation.fromJson(item as Map<String, dynamic>);
+                } catch (e) {
+                  print("ERROR parsing relation item: $item, Error: $e");
+                  return null;
+                }
+              })
+              .whereType<Relation>()
+              .toList();
+          print(
+              'DEBUG: Parsed direct list with ${_relations.length} relations.');
         } else {
           _relations = [];
           print(
-              'ERROR: Relations API response format incorrect. Expected Map with "relations" list. Body: ${response.body}');
+              'ERROR: Relations API response format incorrect. Body: ${response.body}');
         }
       } else {
         print(

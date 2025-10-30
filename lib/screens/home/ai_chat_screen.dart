@@ -3,15 +3,18 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// --- MODIFIED ---: Import Firestore
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+// --- NEW ---: Import STT and TTS packages
+import 'package:speech_to_text/speech_to_text.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 enum ChatRole { user, ai, typing }
 
 class ChatMessage {
   final String content;
   final ChatRole role;
-  // --- MODIFIED ---: Added timestamp for ordering
   final Timestamp timestamp;
 
   ChatMessage({
@@ -20,24 +23,21 @@ class ChatMessage {
     required this.timestamp,
   });
 
-  // --- MODIFIED ---: Factory to create a message from a Firestore snapshot
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     return ChatMessage(
       content: json['content'] as String,
-      // Convert the stored string back to an enum
       role: ChatRole.values.firstWhere(
         (e) => e.toString() == json['role'] as String,
-        orElse: () => ChatRole.ai, // Default fallback
+        orElse: () => ChatRole.ai,
       ),
       timestamp: json['timestamp'] as Timestamp,
     );
   }
 
-  // --- MODIFIED ---: Method to convert a message to JSON for Firestore
   Map<String, dynamic> toJson() {
     return {
       'content': content,
-      'role': role.toString(), // Store the enum as a string
+      'role': role.toString(),
       'timestamp': timestamp,
     };
   }
@@ -55,45 +55,124 @@ class _AIChatScreenState extends State<AIChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final Dio _dio = Dio();
 
-  // --- MODIFIED ---: Firebase and User instances
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   User? _user;
 
-  // --- MODIFIED ---: Local state for typing indicator, not saved to DB
+  // --- NEW ---: State variables for STT and TTS
+  final SpeechToText _speechToText = SpeechToText();
+  final FlutterTts _flutterTts = FlutterTts();
+  bool _speechEnabled = false;
+  bool _isListening = false;
+  bool _isAiMuted = false;
+
   bool _isTyping = false;
+  bool _isInitialScroll = true; // <-- This is correct
 
   @override
   void initState() {
     super.initState();
-    // --- MODIFIED ---: Get the current user on init
     _user = FirebaseAuth.instance.currentUser;
+    // --- NEW ---: Initialize speech and TTS
+    _initSpeech();
+    _initTts();
+  }
+
+  // --- NEW ---: Initialize Text-to-Speech
+  void _initTts() {
+    // You can set language, pitch, etc. here if needed
+    _flutterTts.setLanguage("en-US");
+    _flutterTts.setPitch(1.0);
+  }
+
+  // --- NEW ---: Initialize Speech-to-Text
+  void _initSpeech() async {
+    _speechEnabled = await _speechToText.initialize();
+    setState(() {});
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
+    // --- NEW ---: Stop STT and TTS
+    _speechToText.stop();
+    _flutterTts.stop();
     super.dispose();
   }
 
-  // --- Auto-Scrolling Logic (Your code was already perfect) ---
+  // --- MODIFIED: This is the new "smart" scrolling function ---
   void _scrollToBottom() {
+    // This callback runs *after* the UI has been built for the current frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+      if (!_scrollController.hasClients) return; // Not built yet
+
+      if (_isInitialScroll) {
+        // --- INITIAL LOAD ---
+        // On the first load, just JUMP to the end instantly.
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        _isInitialScroll = false; // Only do this once
+      } else {
+        // --- NEW MESSAGE ---
+        // For all new messages, animate to the end.
+        // We check if we are already near the bottom, to avoid annoying scrolls
+        // if the user has scrolled up to read old messages.
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        final currentScroll = _scrollController.position.pixels;
+        // The "200.0" is a buffer. If the user is within 200 pixels
+        // of the bottom, we auto-scroll. Otherwise, we don't.
+        if (maxScroll - currentScroll <= 200.0) {
+          _scrollController.animateTo(
+            maxScroll,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      }
+    });
+  }
+  // --- END OF MODIFIED FUNCTION ---
+
+  // --- NEW ---: Text-to-Speech "speak" function
+  Future<void> _speak(String text) async {
+    if (_isAiMuted) return; // Don't speak if muted
+    await _flutterTts.awaitSpeakCompletion(true);
+    await _flutterTts.speak(text);
+  }
+
+  // --- NEW ---: STT Start Listening function
+  void _startListening() async {
+    await _speechToText.listen(onResult: _onSpeechResult);
+    setState(() {
+      _isListening = true;
+    });
+  }
+
+  // --- NEW ---: STT Stop Listening function
+  void _stopListening() async {
+    await _speechToText.stop();
+    setState(() {
+      _isListening = false;
+    });
+  }
+
+  // --- NEW ---: STT Result callback
+  void _onSpeechResult(SpeechRecognitionResult result) {
+    setState(() {
+      _controller.text = result.recognizedWords;
+      if (result.finalResult) {
+        _isListening = false;
       }
     });
   }
 
   // --- Message Sending Logic ---
   Future<void> _sendMessage() async {
-    if (_controller.text.trim().isEmpty) return;
+    // --- NEW ---: Stop listening if user hits send
+    if (_isListening) {
+      _stopListening();
+    }
 
-    // --- MODIFIED ---: Check if user is null
+    if (_controller.text.trim().isEmpty) return;
     if (_user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("You must be logged in to chat.")),
@@ -104,18 +183,16 @@ class _AIChatScreenState extends State<AIChatScreen> {
     final userMessage = ChatMessage(
       role: ChatRole.user,
       content: _controller.text.trim(),
-      timestamp: Timestamp.now(), // Add timestamp
+      timestamp: Timestamp.now(),
     );
     _controller.clear();
 
-    // --- MODIFIED ---: Set local typing state
     setState(() {
       _isTyping = true;
     });
-    _scrollToBottom(); // Scroll after user sends
+    // _scrollToBottom(); // <--- REMOVED THIS LINE
 
     try {
-      // --- MODIFIED ---: Save the user's message to Firestore
       final chatRef =
           _db.collection('users').doc(_user!.uid).collection('chats');
       await chatRef.add(userMessage.toJson());
@@ -127,7 +204,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
       }
       String? idToken = await user.getIdToken();
       const chatFunctionUrl =
-          "https://clario-ai-1045577266956.us-central1.run.app/chat";
+          "https://clario-ai-v2-1045577266956.us-central1.run.app/chat";
 
       final response = await _dio.post(
         chatFunctionUrl,
@@ -152,44 +229,49 @@ class _AIChatScreenState extends State<AIChatScreen> {
             "Error: Could not connect to Clario. Please try again later.";
       }
 
+      // --- NEW ---: Speak the AI's response
+      _speak(aiContent);
+
       final aiMessage = ChatMessage(
         role: ChatRole.ai,
         content: aiContent,
         timestamp: Timestamp.now(),
       );
-      // --- MODIFIED ---: Save AI response to Firestore
       await chatRef.add(aiMessage.toJson());
     } on DioException catch (e) {
+      final errorMessageContent = "Network Error: ${e.message}";
+      // --- NEW ---: Speak the error message
+      _speak(errorMessageContent);
       final errorMessage = ChatMessage(
         role: ChatRole.ai,
-        content: "Network Error: ${e.message}",
+        content: errorMessageContent,
         timestamp: Timestamp.now(),
       );
-      // --- MODIFIED ---: Save error message to Firestore
       await _db
           .collection('users')
           .doc(_user!.uid)
           .collection('chats')
           .add(errorMessage.toJson());
     } catch (e) {
+      final errorMessageContent =
+          "An unexpected error occurred: ${e.toString()}";
+      // --- NEW ---: Speak the error message
+      _speak(errorMessageContent);
       final errorMessage = ChatMessage(
         role: ChatRole.ai,
-        content: "An unexpected error occurred: ${e.toString()}",
+        content: errorMessageContent,
         timestamp: Timestamp.now(),
       );
-      // --- MODIFIED ---: Save error message to Firestore
       await _db
           .collection('users')
           .doc(_user!.uid)
           .collection('chats')
           .add(errorMessage.toJson());
     } finally {
-      // --- MODIFIED ---: Stop typing indicator
       setState(() {
         _isTyping = false;
       });
-      // Scroll again in case an error message was added
-      _scrollToBottom();
+      // _scrollToBottom(); // <--- REMOVED THIS LINE
     }
   }
 
@@ -199,80 +281,105 @@ class _AIChatScreenState extends State<AIChatScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      resizeToAvoidBottomInset: true, // ✅ Fix keyboard push issue
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text("Clario AI"),
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 1,
-      ),
-      body: Column(
-        children: [
-          // --- MODIFIED ---: Replaced Expanded(ListView) with a StreamBuilder
-          Expanded(
-            child: _user == null
-                ? const Center(
-                    child: Text("Please log in to see your chat history."))
-                : StreamBuilder<QuerySnapshot>(
-                    // Listen to the user's specific chat collection
-                    stream: _db
-                        .collection('users')
-                        .doc(_user!.uid)
-                        .collection('chats')
-                        .orderBy('timestamp') // Order messages by time
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (snapshot.hasError) {
-                        return const Center(
-                            child: Text("Error loading messages."));
-                      }
-                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return Center(
-                          child: Text(
-                            "Start your conversation with Clario!",
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        );
-                      }
-
-                      // We have data, so map docs to ChatMessage objects
-                      final docs = snapshot.data!.docs;
-                      final messages = docs
-                          .map((doc) => ChatMessage.fromJson(
-                              doc.data() as Map<String, dynamic>))
-                          .toList();
-
-                      // --- MODIFIED ---: Call scroll here to scroll when
-                      // new messages arrive from the stream
-                      _scrollToBottom();
-
-                      return ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(vertical: 16.0),
-                        // --- MODIFIED ---: Item count is list length + typing indicator
-                        itemCount: messages.length + (_isTyping ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          // --- MODIFIED ---: If it's the last item and we are typing, show indicator
-                          if (index == messages.length) {
-                            return const _TypingIndicator();
-                          }
-                          final message = messages[index];
-                          // Your bubble widget works perfectly
-                          return _ChatMessageBubble(message: message);
-                        },
-                      );
-                    },
-                  ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isAiMuted ? Icons.volume_off : Icons.volume_up,
+              color: theme.colorScheme.onSurface,
+            ),
+            onPressed: () {
+              setState(() {
+                _isAiMuted = !_isAiMuted;
+              });
+            },
           ),
-          _buildMessageComposer(),
         ],
+      ),
+      body: SafeArea(
+        // ✅ Prevent content from jumping or hiding
+        child: Column(
+          children: [
+            Expanded(
+              child: _user == null
+                  ? const Center(
+                      child: Text("Please log in to see your chat history."))
+                  : StreamBuilder<QuerySnapshot>(
+                      stream: _db
+                          .collection('users')
+                          .doc(_user!.uid)
+                          .collection('chats')
+                          .orderBy('timestamp',
+                              descending: true) // ✅ Reverse order
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+                        if (snapshot.hasError) {
+                          return const Center(
+                              child: Text("Error loading messages."));
+                        }
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return Center(
+                            child: Text(
+                              "Start your conversation with Clario!",
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          );
+                        }
+
+                        final docs = snapshot.data!.docs;
+                        final messages = docs
+                            .map((doc) => ChatMessage.fromJson(
+                                doc.data() as Map<String, dynamic>))
+                            .toList();
+
+                        // ✅ Smooth scroll to bottom after new message
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          Future.delayed(const Duration(milliseconds: 150), () {
+                            if (_scrollController.hasClients) {
+                              _scrollController.animateTo(
+                                0.0,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOut,
+                              );
+                            }
+                          });
+                        });
+
+                        return ListView.builder(
+                          controller: _scrollController,
+                          reverse: true, // ✅ Makes chat feel like WhatsApp
+                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                          itemCount: messages.length + (_isTyping ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == 0 && _isTyping) {
+                              return const _TypingIndicator();
+                            }
+                            final message =
+                                messages[_isTyping ? index - 1 : index];
+                            return _ChatMessageBubble(message: message);
+                          },
+                        );
+                      },
+                    ),
+            ),
+            _buildMessageComposer(),
+          ],
+        ),
       ),
     );
   }
 
-  // --- Helper Widget for the input area (Your code was already perfect) ---
+  // --- MODIFIED ---: Updated the message composer
   Widget _buildMessageComposer() {
     final theme = Theme.of(context);
     return Container(
@@ -289,7 +396,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
                 controller: _controller,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
-                  hintText: "Type your message...",
+                  hintText:
+                      _isListening ? "Listening..." : "Type your message...",
                   filled: true,
                   fillColor: theme.scaffoldBackgroundColor,
                   border: OutlineInputBorder(
@@ -302,6 +410,30 @@ class _AIChatScreenState extends State<AIChatScreen> {
               ),
             ),
             const SizedBox(width: 8.0),
+            // --- NEW ---: Microphone Button
+            IconButton(
+              style: IconButton.styleFrom(
+                backgroundColor: _isListening
+                    ? theme.colorScheme.primary.withOpacity(0.5)
+                    : theme.scaffoldBackgroundColor,
+                fixedSize: const Size(50, 50),
+              ),
+              icon: Icon(
+                _isListening ? Icons.mic : Icons.mic_none,
+                color: _isListening
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
+              ),
+              // Toggle listening state
+              // Disable button if speech is not enabled
+              onPressed: _speechEnabled
+                  ? (_speechToText.isNotListening
+                      ? _startListening
+                      : _stopListening)
+                  : null,
+            ),
+            const SizedBox(width: 8.0),
+            // --- Send Button (Unchanged) ---
             IconButton.filled(
               style: IconButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
@@ -317,7 +449,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
   }
 }
 
-// --- Reusable Widget for Chat Bubbles (Your code was already perfect) ---
+// --- Reusable Widget for Chat Bubbles (Unchanged) ---
 class _ChatMessageBubble extends StatelessWidget {
   final ChatMessage message;
   const _ChatMessageBubble({required this.message});
@@ -356,7 +488,7 @@ class _ChatMessageBubble extends StatelessWidget {
   }
 }
 
-// --- Reusable Widget for Typing Indicator (Your code was already perfect) ---
+// --- Reusable Widget for Typing Indicator (Unchanged) ---
 class _TypingIndicator extends StatelessWidget {
   const _TypingIndicator();
 
@@ -375,7 +507,6 @@ class _TypingIndicator extends StatelessWidget {
             bottomRight: Radius.circular(20),
           ),
         ),
-        // --- A small visual improvement ---
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [

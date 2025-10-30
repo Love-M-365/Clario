@@ -1,6 +1,7 @@
 import 'dart:async';
-import 'package:flutter/material.dart'; // <-- FIXED
-import 'package:cloud_firestore/cloud_firestore.dart'; // <-- FIXED
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:go_router/go_router.dart';
 
 class DailyQuoteSplashScreen extends StatefulWidget {
@@ -11,48 +12,57 @@ class DailyQuoteSplashScreen extends StatefulWidget {
 }
 
 class _DailyQuoteSplashScreenState extends State<DailyQuoteSplashScreen> {
-  String _quoteText = "Loading your daily quote...";
-  String _quoteAuthor = "";
+  String _quoteText = "Loading your wellness quote...";
+  bool _isLoading = true;
+
+  // Replace with your actual deployed Cloud Run URL 👇
+  static const String _apiUrl =
+      "https://wellness-quote-service-1045577266956.us-central1.run.app/get-wellness-quote";
 
   @override
   void initState() {
     super.initState();
-    _fetchDailyQuote();
-    _startNavigationTimer();
+    _fetchAIQuote();
   }
 
-  Future<void> _fetchDailyQuote() async {
+  Future<void> _fetchAIQuote() async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('config')
-          .doc('dailyQuote')
-          .get();
+      final response = await http.get(Uri.parse(_apiUrl));
 
-      if (mounted && doc.exists) {
-        setState(() {
-          _quoteText = doc.data()?['text'] ?? 'Be kind to your mind.';
-          _quoteAuthor = doc.data()?['author'] ?? 'Clario';
-        });
-      } else if (mounted) {
-        setState(() {
-          _quoteText = 'Welcome back.';
-          _quoteAuthor = 'Take a deep breath';
-        });
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final quote = data['quote'] ?? 'Take a deep breath and start fresh.';
+
+        if (mounted) {
+          setState(() {
+            _quoteText = quote;
+            _isLoading = false;
+          });
+          // Start timer AFTER quote is loaded
+          _startNavigationTimer();
+        }
+      } else {
+        _handleError();
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _quoteText = 'Every day is a new beginning.';
-          _quoteAuthor = 'Anonymous';
-        });
-      }
+      _handleError();
+    }
+  }
+
+  void _handleError() {
+    if (mounted) {
+      setState(() {
+        _quoteText = 'You’re stronger than you think.';
+        _isLoading = false;
+      });
+      // Even in error, wait 3 seconds before navigation
+      _startNavigationTimer();
     }
   }
 
   void _startNavigationTimer() {
-    Timer(const Duration(seconds: 4), () {
+    Timer(const Duration(seconds: 3), () {
       if (mounted) {
-        // Use go_router to navigate and replace the stack
         context.goNamed('home');
       }
     });
@@ -67,26 +77,25 @@ class _DailyQuoteSplashScreenState extends State<DailyQuoteSplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                '"$_quoteText"',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontStyle: FontStyle.italic,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (_quoteAuthor.isNotEmpty)
-                Text(
-                  '- $_quoteAuthor',
+              AnimatedOpacity(
+                opacity: _isLoading ? 0.6 : 1.0,
+                duration: const Duration(milliseconds: 500),
+                child: Text(
+                  '"$_quoteText"',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 20,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w500,
+                    height: 1.4,
                   ),
                 ),
-              const SizedBox(height: 40),
-              const CircularProgressIndicator(),
+              ),
+              const SizedBox(height: 32),
+              if (_isLoading)
+                const CircularProgressIndicator()
+              else
+                const Icon(Icons.favorite, color: Colors.pinkAccent, size: 32),
             ],
           ),
         ),
