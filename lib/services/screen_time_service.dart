@@ -11,7 +11,7 @@ class ScreenTimeService {
 
   // Cloud Function URL
   final String _cloudFunctionUrl =
-      'https://us-central1-clario-f60b0.cloudfunctions.net/processSensorData';
+      'https://asia-south1-clario-f60b0.cloudfunctions.net/processSensorData';
 
   /// Requests permission to access app usage stats (Android only)
   Future<void> requestPermissions() async {

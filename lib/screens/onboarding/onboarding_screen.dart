@@ -75,7 +75,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_completed_onboarding', true);
     if (mounted) {
-      context.go('/login');
+      context.go('/register');
     }
   }
 

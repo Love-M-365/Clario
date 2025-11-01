@@ -66,6 +66,8 @@ dependencies:
   # Charts & Visualization
   fl_chart: ^1.1.0
   syncfusion_flutter_charts: ^31.1.17
+  just_audio: ^0.9.36
+  audio_service: ^0.18.13
   
   # Image Processing
   cached_network_image: ^3.3.0

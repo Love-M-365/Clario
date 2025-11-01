@@ -8,6 +8,10 @@ import 'sleep_report_screen.dart'; // Make sure this path is correct
 // For animations
 import 'sleep_input_screen.dart'; // Make sure this path is correct
 
+// --- 1. ADD THIS IMPORT ---
+import '../services/sleep_sounds_screen.dart'; // To navigate to your new screen
+// --- END OF ADDED IMPORT ---
+
 class SleepDashboardScreen extends StatefulWidget {
   const SleepDashboardScreen({Key? key}) : super(key: key);
 
@@ -109,7 +113,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
       backgroundColor: const Color(0xFFF9FAFC), // Google-like app bg color
       appBar: _buildAppBar(),
       floatingActionButton: _buildFAB(),
-      body: _buildBody(),
+      body: _buildBody(), // <-- This is where we will add the card
     );
   }
 
@@ -166,6 +170,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
     ).animate().scale(delay: 500.ms); // Simple animation
   }
 
+  // --- 2. EDIT THE _buildBody METHOD ---
   /// Builds the main body, handling loading and pull-to-refresh
   Widget _buildBody() {
     if (_loading) {
@@ -178,7 +183,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          // --- 1. Analysis Report Card (NEW) ---
+          // --- 1. Analysis Report Card (Existing) ---
           _buildHeader("Analysis Report"),
           const SizedBox(height: 8),
           _buildAnalysisReportCard()
@@ -186,9 +191,19 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
               .fadeIn(duration: 400.ms)
               .slideY(begin: 0.1, end: 0),
 
+          // --- THIS IS THE NEW SECTION YOU ASKED FOR ---
+          const SizedBox(height: 24),
+          _buildHeader("Sleep Sounds"),
+          const SizedBox(height: 8),
+          _buildSleepSoundsCard()
+              .animate()
+              .fadeIn(duration: 400.ms, delay: 200.ms) // Staggered animation
+              .slideY(begin: 0.1, end: 0),
+          // --- END OF NEW SECTION ---
+
           const SizedBox(height: 24),
 
-          // --- 2. Recent Logs List ---
+          // --- 3. Recent Logs List (Existing) ---
           _buildHeader("Recent Logs"),
           const SizedBox(height: 8),
           _buildSleepList(), // This will now build the expandable list
@@ -196,6 +211,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
       ),
     );
   }
+  // --- END OF EDITED METHOD ---
 
   /// Helper for section headers (e.g., "Analysis Report")
   Widget _buildHeader(String title) {
@@ -310,6 +326,57 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
       ],
     );
   }
+
+  // --- 3. ADD THIS NEW HELPER METHOD ---
+  // (You can paste this right after your _buildMetricItem method)
+
+  /// Builds a card to navigate to the Sleep Sounds screen
+  Widget _buildSleepSoundsCard() {
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      clipBehavior: Clip.antiAlias, // For the InkWell ripple effect
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SleepSoundsScreen()),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Icon(Icons.music_note_outlined,
+                  color: Colors.purple.shade400, size: 36),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Sleep Sounds",
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "Listen to relaxing sounds for a better sleep.",
+                      style: TextStyle(fontSize: 14, color: Colors.black54),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios,
+                  color: Colors.black38, size: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  // --- END OF ADDED METHOD ---
 
   // ---
   // --- THIS IS THE NEW, REPLACED _buildSleepList ---
@@ -460,16 +527,20 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
 
   // Helper for section headers
   Widget _buildSectionHeader(IconData icon, String title, MaterialColor color) {
+    // --- THIS WIDGET IS NOW FIXED FOR OVERFLOW ---
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, color: color, size: 24),
         const SizedBox(width: 8),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color.shade800,
+        Expanded(
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color.shade800,
+            ),
           ),
         ),
       ],

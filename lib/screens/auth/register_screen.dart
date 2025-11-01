@@ -22,7 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   int _selectedAge = 16; // Default age
-  bool _isLoading = false;
+  bool _isRegistering = false;
 
   @override
   void dispose() {
@@ -37,9 +37,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _register() async {
     // Check if the form is valid before proceeding
-    if (!_formKey.currentState!.validate() || _isLoading) return;
+    if (!_formKey.currentState!.validate() || _isRegistering) return;
 
-    setState(() => _isLoading = true);
+    setState(() => _isRegistering = true);
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -76,7 +76,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } finally {
       // Ensure the loading state is always reset
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _isRegistering = false);
       }
     }
   }
@@ -133,16 +133,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   SizedBox(
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _register,
+                      onPressed: _isRegistering ? null : _register,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color(0xFF0C1324), // Primary color
+                        backgroundColor: const Color(0xFF0C1324),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: _isLoading
+                      child: _isRegistering
                           ? const SizedBox(
                               height: 24,
                               width: 24,
@@ -154,9 +153,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                   ),
+
+                  const SizedBox(height: 16),
+
+// OR divider
+                  Row(
+                    children: const [
+                      Expanded(child: Divider(thickness: 1)),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Text("or"),
+                      ),
+                      Expanded(child: Divider(thickness: 1)),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
                   const SizedBox(height: 24),
 
-                  // Sign In Link
+// Sign In Link
                   _buildSignInAction(context),
                 ],
               ),

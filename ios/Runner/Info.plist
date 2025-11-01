@@ -2,23 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-<!-- Put me in the [my_project]/ios/Runner/Info.plist file --> <!--ish-->
-<!-- Google Sign-in Section -->
-<key>CFBundleURLTypes</key>
-<array>           
-	<dict>
-	
-		<key>CFBundleTypeRole</key>
-		<string>Editor</string>
-		<key>CFBundleURLSchemes</key>
-		<array>
-			<!-- TODO Replace this value: -->
-			<!-- Copied from GoogleService-Info.plist key REVERSED_CLIENT_ID -->
-			<string>com.googleusercontent.apps.1045577266956-4sbh1ve2cl50atu3gj6l380ooaql8p9m</string>
-		</array>
-	</dict>
-</array>
-<!-- End of the Google Sign-in Section --><!--ish-->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1045577266956-4sbh1ve2cl50atu3gj6l380ooaql8p9m</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -62,21 +56,20 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-</dict>
-<dict>
-   <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>UIApplicationSupportsIndirectInputEvents</key>
-    <true/>
-    <key>NSSpeechRecognitionUsageDescription</key>
-    <string>This app uses speech recognition to turn your voice into a journal entry.</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>This app needs microphone access to enable voice-based journaling.</string>
-    <key>NSMotionUsageDescription</key>
-    <string>Clario uses motion sensors to encourage healthy activity.</string>
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Needed for step tracking.</string>
 
-</dict> </plist>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>This app uses speech recognition to turn your voice into a journal entry.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone access to enable voice-based journaling.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Clario uses motion sensors to encourage healthy activity.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Needed for step tracking.</string>
+
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+
+</dict>
+</plist>

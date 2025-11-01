@@ -63,11 +63,7 @@ final GoRouter _router = GoRouter(
       name: 'verify_email',
       builder: (context, state) => const VerifyEmailScreen(),
     ),
-    GoRoute(
-      path: '/questionnaire',
-      name: 'questionnaire',
-      builder: (context, state) => const QuestionnaireScreen(),
-    ),
+
     GoRoute(
       path: '/home',
       name: 'home',
@@ -106,7 +102,7 @@ final GoRouter _router = GoRouter(
         GoRoute(
           path: 'notifications',
           name: 'notifications',
-          builder: (context, state) => const NotificationPanelScreen(),
+          builder: (context, state) => const NotificationsScreen(),
         ),
         GoRoute(
           path: 'relationship-mapping',

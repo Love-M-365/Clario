@@ -10,6 +10,15 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
+  Future<bool> checkUserExists(String uid) async {
+  final snapshot = await _dbRef.child("users/$uid").get();
+  return snapshot.exists;
+}
+
+Future<void> saveUserData(String uid, Map<String, dynamic> data) async {
+  await _dbRef.child("users/$uid").set(data);
+}
+
 
   User? _user;
   bool _isLoading = false;
@@ -118,89 +127,95 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Google Sign-In / Sign-Up
   Future<bool> signInWithGoogle() async {
-    try {
-      setLoading(true);
-      clearError();
+  try {
+    setLoading(true);
+    clearError();
 
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) {
-        setLoading(false);
-        return false; // User cancelled Google Sign-In
-      }
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final UserCredential result =
-          await _auth.signInWithCredential(credential);
-      _user = result.user;
-
-      if (_user != null) {
-        // Save new user data in Realtime Database if not exists
-        final snapshot = await _dbRef.child("users/${_user!.uid}").get();
-        if (!snapshot.exists) {
-          await _dbRef.child("users/${_user!.uid}").set({
-            'name': _user!.displayName ?? '',
-            'email': _user!.email ?? '',
-            'createdAt': DateTime.now().toIso8601String(),
-            'lastLoginAt': DateTime.now().toIso8601String(),
-          });
-        } else {
-          // Update last login
-          await _dbRef
-              .child("users/${_user!.uid}/lastLoginAt")
-              .set(DateTime.now().toIso8601String());
-        }
-      }
-
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+    if (googleUser == null) {
       setLoading(false);
-      return true;
-    } on FirebaseAuthException catch (e) {
-      setLoading(false);
-      _errorMessage = _getErrorMessage(e.code);
-      notifyListeners();
-      return false;
-    } catch (_) {
-      setLoading(false);
-      _errorMessage = 'An unexpected error occurred';
-      notifyListeners();
-      return false;
+      return false; // User cancelled
     }
-  }
 
-  // Sign out
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
+
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    // 👇 This automatically creates the user in Firebase if not exists
+    final UserCredential result = await _auth.signInWithCredential(credential);
+    _user = result.user;
+
+    if (_user != null) {
+      final uid = _user!.uid;
+      final snapshot = await _dbRef.child("users/$uid").get();
+
+      if (!snapshot.exists) {
+        // 👇 If user not found in DB, this is the first signup
+        await _dbRef.child("users/$uid").set({
+          'name': _user!.displayName ?? '',
+          'email': _user!.email ?? '',
+          'createdAt': DateTime.now().toIso8601String(),
+          'lastLoginAt': DateTime.now().toIso8601String(),
+          'isNewUser': true, // 👈 optional flag
+        });
+
+        print("🆕 New Google user created.");
+      } else {
+        // 👇 Existing user login
+        await _dbRef
+            .child("users/$uid/lastLoginAt")
+            .set(DateTime.now().toIso8601String());
+        print("✅ Returning Google user logged in.");
+      }
+    }
+
+    setLoading(false);
+    return true;
+  } on FirebaseAuthException catch (e) {
+    setLoading(false);
+    _errorMessage = _getErrorMessage(e.code);
+    notifyListeners();
+    return false;
+  } catch (e) {
+    setLoading(false);
+    _errorMessage = 'An unexpected error occurred: $e';
+    notifyListeners();
+    return false;
+  }
+}
   Future<void> signOut() async {
-    try {
-      await _auth.signOut();
-      _user = null;
-      notifyListeners();
-    } catch (_) {
-      _errorMessage = 'Error signing out';
-      notifyListeners();
-    }
+    await _auth.signOut();
+    await GoogleSignIn().signOut();
+    _user = null;
+    notifyListeners();
   }
 
-  String _getErrorMessage(String errorCode) {
-    switch (errorCode) {
-      case 'user-not-found':
-        return 'No user found with this email address.';
-      case 'wrong-password':
-        return 'Wrong password provided.';
-      case 'email-already-in-use':
-        return 'An account already exists with this email.';
-      case 'weak-password':
-        return 'The password provided is too weak.';
+  // 👇 Add this below signOut or anywhere near the end of the class
+  String _getErrorMessage(String code) {
+    switch (code) {
       case 'invalid-email':
-        return 'The email address is not valid.';
+        return 'The email address is invalid.';
+      case 'user-disabled':
+        return 'This user account has been disabled.';
+      case 'user-not-found':
+        return 'No user found with this email.';
+      case 'wrong-password':
+        return 'Incorrect password.';
+      case 'email-already-in-use':
+        return 'An account already exists for this email.';
+      case 'weak-password':
+        return 'The password is too weak.';
+      case 'account-exists-with-different-credential':
+        return 'This email is linked with another sign-in method.';
       default:
-        return 'An error occurred. Please try again.';
+        return 'An unknown error occurred. Please try again.';
     }
   }
 }
+
+

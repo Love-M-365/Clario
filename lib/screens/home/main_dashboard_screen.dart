@@ -271,7 +271,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                 ),
                 actions: [
                   IconButton(
+                    icon: const Icon(Icons.notifications_active_outlined),
+                    tooltip: 'Notifications',
+                    onPressed: () => context.go('/home/notifications'),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
                     icon: Icon(Icons.settings_outlined, color: iconColor),
+                    tooltip: 'Settings',
                     onPressed: () => context.go('/home/settings'),
                   ),
                 ],
@@ -514,7 +521,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
   }
 
   Widget _buildMoodAvatar() {
-    // ... (Your existing _buildMoodAvatar code)
     return Consumer<UserDataProvider>(
       builder: (context, userDataProvider, child) {
         if (userDataProvider.isLoading && userDataProvider.user == null) {
@@ -524,12 +530,16 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
           );
         }
 
-        // Get current avatar URL or fall back to default
+        // ✅ Always safe-check avatar URL
         final String? avatarUrl = userDataProvider.currentAvatarUrl;
-        final String safeAvatarUrl = (avatarUrl != null && avatarUrl.isNotEmpty)
-            ? avatarUrl
-            : 'assets/avatars/default_neutral.png';
-        final bool isNetworkImage = safeAvatarUrl.startsWith('http');
+
+        // ✅ Default avatar for new users / missing links
+        final bool hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+        final String displayAvatar =
+            hasAvatar ? avatarUrl : 'assets/avatars/default_neutral.jpg';
+
+        final bool isNetworkImage =
+            hasAvatar && displayAvatar.startsWith('http');
         final Color moodColor = userDataProvider.getMoodColor();
 
         return Center(
@@ -559,7 +569,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                         ),
                       ),
                     ),
-
                     // Inner white spacing
                     Container(
                       width: 182,
@@ -569,7 +578,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                         color: Colors.white,
                       ),
                     ),
-
                     // === Avatar image ===
                     Container(
                       width: 180,
@@ -587,11 +595,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                       child: ClipOval(
                         child: isNetworkImage
                             ? Image.network(
-                                safeAvatarUrl,
-                                key: ValueKey(safeAvatarUrl),
+                                displayAvatar,
+                                key: ValueKey(displayAvatar),
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
-                                  // 🟢 Always show default avatar on error
+                                  // ✅ Always fallback to default image
                                   return Image.asset(
                                     'assets/avatars/default_neutral.png',
                                     fit: BoxFit.cover,
@@ -605,8 +613,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                                 },
                               )
                             : Image.asset(
-                                safeAvatarUrl,
-                                key: ValueKey(safeAvatarUrl),
+                                displayAvatar,
+                                key: ValueKey(displayAvatar),
                                 fit: BoxFit.cover,
                               ),
                       ),
@@ -646,8 +654,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
             color: Colors.green.shade400,
             onTap: () => context.go('/home/journal-entry'),
           ),
-          const SizedBox(height: 16),
-          _GenerateAvatarButtonExample(),
         ],
       ),
     );
@@ -784,72 +790,6 @@ class _FeatureButton extends StatelessWidget {
   }
 }
 
-class _GenerateAvatarButtonExample extends StatefulWidget {
-  const _GenerateAvatarButtonExample({super.key});
-
-  @override
-  State<_GenerateAvatarButtonExample> createState() =>
-      _GenerateAvatarButtonExampleState();
-}
-
-class _GenerateAvatarButtonExampleState
-    extends State<_GenerateAvatarButtonExample> {
-  bool _isGenerating = false;
-  final String _basePrompt = "A 3D avatar of a friendly student, cartoon style";
-
-  void _handleGeneration() async {
-    setState(() => _isGenerating = true);
-    final provider = Provider.of<UserDataProvider>(context, listen: false);
-
-    try {
-      await provider.generateAndSaveAvatars(_basePrompt);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Avatars generated!"),
-              backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text("Error: ${e.toString()}"),
-              backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isGenerating = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<UserDataProvider>();
-    final bool avatarsExist = provider.user?.avatarUrls?.isNotEmpty ?? false;
-
-    if (avatarsExist) {
-      return const SizedBox.shrink();
-    }
-
-    return _isGenerating
-        ? const Center(child: CircularProgressIndicator())
-        : ElevatedButton.icon(
-            icon: const Icon(Icons.auto_awesome),
-            label: const Text("Generate My Avatars"),
-            onPressed: _handleGeneration,
-            style: ElevatedButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15)),
-            ),
-          );
-  }
-}
 // ---
 
 // ---

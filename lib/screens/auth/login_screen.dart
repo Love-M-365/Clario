@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../services/journal_notification_service.dart';
 // Assuming your AuthProvider is located here
 import '../../providers/auth_provider.dart' as my_auth;
 
@@ -26,12 +27,34 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
 
+      // First, sign in the user temporarily to check existence
       final UserCredential userCredential =
           await _auth.signInWithCredential(credential);
+      final User? user = userCredential.user;
 
-      return userCredential.user;
+      if (user == null) return null;
+
+      // ✅ Step 2 — Check if the user exists in Firestore
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (!userDoc.exists) {
+        // User doesn’t exist → show a message & sign them out again
+        await _auth.signOut();
+        await _googleSignIn.signOut();
+
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message:
+              'No account found for this Google account. Please sign up first.',
+        );
+      }
+
+      // ✅ User exists → return user object
+      return user;
     } catch (e) {
-      // It's good practice to show errors to the user
       debugPrint('Google Sign-In Error: $e');
       return null;
     }
@@ -83,6 +106,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success && mounted) {
+        await NotificationService.initialize();
+        await NotificationService.setupPushNotifications();
         context.go('/home');
       } else if (mounted) {
         // Show an error message if login fails
@@ -107,12 +132,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final user = await AuthService().signInWithGoogle();
+
       if (user != null && mounted) {
+        await NotificationService.initialize();
+        await NotificationService.setupPushNotifications();
         context.go('/home');
-      } else if (mounted) {
+      }
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found' && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Google Sign-In failed. Please try again."),
+            content: Text('No account found. Please sign up first.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.message ?? "Google Sign-In failed."}'),
             backgroundColor: Colors.redAccent,
           ),
         );

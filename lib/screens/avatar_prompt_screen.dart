@@ -1,9 +1,6 @@
-// lib/screens/settings/avatar_prompt_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../providers/user_data_provider.dart';
 
 class AvatarPromptScreen extends StatefulWidget {
@@ -20,7 +17,6 @@ class _AvatarPromptScreenState extends State<AvatarPromptScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill the text field with the currently saved prompt, if any
     final currentPrompt =
         Provider.of<UserDataProvider>(context, listen: false).baseAvatarPrompt;
     if (currentPrompt != null) {
@@ -47,7 +43,6 @@ class _AvatarPromptScreenState extends State<AvatarPromptScreen> {
     final provider = Provider.of<UserDataProvider>(context, listen: false);
 
     try {
-      // Call the provider method to save the prompt and trigger generation
       await provider.saveBasePromptAndGenerateAvatars(newPrompt);
 
       if (mounted) {
@@ -57,17 +52,38 @@ class _AvatarPromptScreenState extends State<AvatarPromptScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        // Navigate back after success
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        final errorMsg = e.toString();
+
+        // 🟡 NEW — detect Imagen "no image" or safety filter messages
+        if (errorMsg.contains('Imagen returned no images') ||
+            errorMsg.contains('no images generated') ||
+            errorMsg.contains('safety') ||
+            errorMsg.contains('blocked')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                '⚠️ Your avatar description triggered content safety filters.\n'
+                'Please try a simpler, neutral description.\n\n'
+                'Tip: Avoid words like "boy", "girl", "sad", "angry", or looks-related terms.',
+              ),
+              backgroundColor: Colors.orangeAccent,
+              duration: Duration(seconds: 6),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          // 🟡 Regular error handler for genuine backend issues
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $errorMsg'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -97,7 +113,8 @@ class _AvatarPromptScreenState extends State<AvatarPromptScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Be descriptive! Example: "A friendly cartoon student with glasses and short brown hair, simple background"',
+              'Be descriptive but neutral. Example:\n'
+              '"A friendly cartoon student with glasses and short brown hair, simple background"',
               style:
                   theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
             ),
@@ -105,8 +122,8 @@ class _AvatarPromptScreenState extends State<AvatarPromptScreen> {
             Expanded(
               child: TextField(
                 controller: _promptController,
-                maxLines: null, // Allows multiline input
-                expands: true, // Fills available space
+                maxLines: null,
+                expands: true,
                 textAlignVertical: TextAlignVertical.top,
                 decoration: InputDecoration(
                   hintText: 'Enter description here...',

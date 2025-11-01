@@ -81,7 +81,7 @@ void callbackDispatcher() {
 /// Uploads summary data to Cloud Function for AI processing
 Future<void> _sendToCloudFunction(Map<String, dynamic> data) async {
   const String cloudFunctionUrl =
-      'https://us-central1-clario-f60b0.cloudfunctions.net/processSensorData';
+      'https://asia-south1-clario-f60b0.cloudfunctions.net/processSensorData';
 
   try {
     String? token = await FirebaseAuth.instance.currentUser?.getIdToken();

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart'; // Add go_router import
 import '../questionnaire/questionnaire_screen.dart';
+import '../../services/journal_notification_service.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   const VerifyEmailScreen({super.key});
@@ -39,7 +40,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       _timer?.cancel();
       if (mounted) {
         // Use go_router to navigate to the questionnaire screen
-        context.go('/questionnaire');
+        await NotificationService.initialize();
+        await NotificationService.setupPushNotifications();
+        context.go('/home');
       }
     } else {
       if (!auto) {
@@ -85,7 +88,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  "We sent a verification link to your email.\nPlease verify before continuing.",
+                  "We sent a verification link to your email. (Check SPAM folder)\nPlease verify before continuing.",
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white70), // Changed text color
                 ),

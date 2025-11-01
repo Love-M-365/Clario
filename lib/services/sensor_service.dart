@@ -22,6 +22,7 @@ class SensorService {
   double _shakeThreshold = 20.0;
   DateTime _lastShake = DateTime.now();
 
+  // ---------------------- INIT ----------------------
   Future<void> init() async {
     await _initNotifications();
     await _requestUsagePermission();
@@ -35,6 +36,23 @@ class SensorService {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings = InitializationSettings(android: android);
     await _notifications.initialize(initSettings);
+
+    // iOS/macOS permissions
+    final iosPlugin = _notifications.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
+    final macPlugin = _notifications.resolvePlatformSpecificImplementation<
+        MacOSFlutterLocalNotificationsPlugin>();
+
+    await iosPlugin?.requestPermissions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    await macPlugin?.requestPermissions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
   }
 
   Future<void> showNotification(String title, String body) async {
@@ -44,6 +62,7 @@ class SensorService {
       importance: Importance.high,
       priority: Priority.high,
     );
+
     await _notifications.show(
       0,
       title,
@@ -74,8 +93,10 @@ class SensorService {
     }, SetOptions(merge: true));
 
     if (steps < 2000) {
-      showNotification('Time for a walk 🏃‍♀️',
-          'You’ve walked only $steps steps today. A short walk can refresh your mind!');
+      showNotification(
+        'Time for a walk 🏃‍♀️',
+        'You’ve walked only $steps steps today. A short walk can refresh your mind!',
+      );
     }
   }
 
@@ -89,8 +110,10 @@ class SensorService {
         final now = DateTime.now();
         if (now.difference(_lastShake).inSeconds > 5) {
           _lastShake = now;
-          showNotification('Are you feeling nervous? 😟',
-              'We noticed some sudden movements. Maybe take a deep breath or open Clario.');
+          showNotification(
+            'Are you feeling nervous? 😟',
+            'We noticed some sudden movements. Maybe take a deep breath or open Clario.',
+          );
           _saveShakeEvent();
         }
       }
@@ -106,7 +129,7 @@ class SensorService {
     }, SetOptions(merge: true));
   }
 
-  // ---------------------- USAGE STATS SETUP ----------------------
+  // ---------------------- USAGE STATS ----------------------
   Future<void> _requestUsagePermission() async {
     bool granted = await UsageStats.checkUsagePermission() ?? false;
     if (!granted) {
@@ -117,7 +140,9 @@ class SensorService {
   void _startScreenTimeTracking() {
     // Run every 30 minutes
     _timer = Timer.periodic(
-        const Duration(minutes: 30), (_) => _analyzeUsageStats());
+      const Duration(minutes: 30),
+      (_) => _analyzeUsageStats(),
+    );
   }
 
   Future<void> _analyzeUsageStats() async {

@@ -1,128 +1,176 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class NotificationPanelScreen extends StatelessWidget {
-  const NotificationPanelScreen({super.key});
-
-  final List<Map<String, dynamic>> notifications = const [
-    {
-      'title': 'Daily Reflection Reminder',
-      'body': 'Take a moment to reflect on your day and track your mood.',
-      'timestamp': '2025-09-17T10:00:00Z',
-      'isRead': false,
-    },
-    {
-      'title': 'New Tool: Empty Chair Mode',
-      'body':
-          'Learn how to process complex emotions with our new Empty Chair Mode.',
-      'timestamp': '2025-09-16T15:30:00Z',
-      'isRead': true,
-    },
-    {
-      'title': 'AI Chat Response',
-      'body': 'Your AI therapist has a new insight for you.',
-      'timestamp': '2025-09-16T09:00:00Z',
-      'isRead': false,
-    },
-    {
-      'title': 'Sleep Analysis Ready',
-      'body': 'Your sleep data for last night is ready. View your report.',
-      'timestamp': '2025-09-15T08:00:00Z',
-      'isRead': true,
-    },
-  ];
+class NotificationsScreen extends StatelessWidget {
+  const NotificationsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    // Use theme colors for a more consistent feel
+    final theme = Theme.of(context);
+    // This is your app's "brand" color, we'll keep using it as an accent.
+    const Color accentColor = Colors.deepPurpleAccent;
+
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text("Notifications"),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
+          elevation: 1,
+        ),
+        backgroundColor: Colors.white,
+        body: const Center(
+          child: Text(
+            "Please sign in to see notifications",
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    final notificationsRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('notifications')
+        .orderBy('timestamp', descending: true);
+
     return Scaffold(
-      extendBodyBehindAppBar: true, // This is the key fix
-      backgroundColor: Colors.transparent, // And this one
       appBar: AppBar(
-        title: const Text(
-          'Notifications',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text("Notifications"),
+        // Google-style AppBars are typically white (or surface color)
+        backgroundColor: Colors.white,
+        // This sets the color for the title and icons (like the back button)
+        foregroundColor: Colors.black87,
+        // A very subtle shadow
+        elevation: 1,
+        // Google apps usually have left-aligned titles
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF0C1324),
-              Color(0xFF131A2D),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: ListView.builder(
-              itemCount: notifications.length,
-              itemBuilder: (context, index) {
-                final notification = notifications[index];
-                return _buildNotificationCard(context, notification);
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+      // A very light grey background makes the white cards pop
+      backgroundColor: Colors.grey.shade50,
+      body: StreamBuilder<QuerySnapshot>(
+        stream: notificationsRef.snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: CircularProgressIndicator(
+                color: accentColor,
+              ),
+            );
+          }
 
-  Widget _buildNotificationCard(
-      BuildContext context, Map<String, dynamic> notification) {
-    final bool isRead = notification['isRead'];
-    final DateTime timestamp = DateTime.parse(notification['timestamp']);
-    final String formattedTime = DateFormat('MMM d, h:mm a').format(timestamp);
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            // An enhanced "empty" state
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.notifications_none_outlined,
+                      size: 80,
+                      color: Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "You're all caught up!",
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.grey.shade700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "New reminders and updates will appear here.",
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey.shade500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      decoration: BoxDecoration(
-        color: isRead
-            ? Colors.white.withOpacity(0.05)
-            : Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(
-          color: isRead
-              ? Colors.white.withOpacity(0.05)
-              : Colors.blue.withOpacity(0.5),
-          width: 1.0,
-        ),
-      ),
-      child: ListTile(
-        leading: Icon(
-          isRead ? Icons.notifications_none : Icons.notifications_active,
-          color: isRead ? Colors.white.withOpacity(0.6) : Colors.white,
-        ),
-        title: Text(
-          notification['title'],
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
-          ),
-        ),
-        subtitle: Text(
-          notification['body'],
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
-          ),
-        ),
-        trailing: Text(
-          formattedTime,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.5),
-            fontSize: 12,
-          ),
-        ),
-        onTap: () {
-          // TODO: Add logic to mark as read and navigate to relevant screen
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Tapped on: ${notification['title']}')),
+          final notifications = snapshot.data!.docs;
+
+          return ListView.builder(
+            // Padding is now on the cards themselves via `margin`
+            itemCount: notifications.length,
+            itemBuilder: (context, index) {
+              final doc = notifications[index];
+              final data = doc.data() as Map<String, dynamic>;
+
+              final title = data['title'] ?? 'Reminder';
+              final message = data['message'] ?? '';
+              final app = data['app'] ?? '';
+              final timestamp = (data['timestamp'] as Timestamp).toDate();
+              final formattedTime =
+                  DateFormat('MMM d, hh:mm a').format(timestamp);
+
+              // Use a Card for idiomatic Material Design
+              return Card(
+                // This margin provides spacing between cards and from the screen edge
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                elevation: 1,
+                shadowColor: Colors.grey.withOpacity(0.1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  // Add more internal padding
+                  contentPadding: const EdgeInsets.all(16.0),
+                  leading: CircleAvatar(
+                    backgroundColor: accentColor.withOpacity(0.1),
+                    child: Icon(
+                      Icons.notifications_active_rounded,
+                      color: accentColor,
+                    ),
+                  ),
+                  title: Text(
+                    title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600, // A bit bolder
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text(
+                        message,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            app.isNotEmpty ? "App: $app" : "",
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          Text(
+                            formattedTime,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           );
         },
       ),
