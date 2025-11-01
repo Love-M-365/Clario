@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import '../../services/journal_notification_service.dart';
 
 // A data class for a single onboarding page
 class OnboardingPage {
@@ -75,6 +76,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_completed_onboarding', true);
     if (mounted) {
+      await NotificationService.initialize();
+      await NotificationService.setupPushNotifications();
       context.go('/register');
     }
   }

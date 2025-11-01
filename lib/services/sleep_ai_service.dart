@@ -4,11 +4,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class SleepAIService {
   static const String baseUrl =
-      'https://sleep-wellness-agent-1081335572417.us-central1.run.app';
+      'https://sleep-wellness-coach-1081335572417.us-central1.run.app';
   static const String appName = 'sleep-agent-app';
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String? _cachedSessionId;
+  bool _introMessageSent =
+      false; // ✅ Tracks if intro message was sent this session
 
   /// Get current authenticated user ID from Firebase
   String get userId {
@@ -19,13 +21,8 @@ class SleepAIService {
     return user.uid;
   }
 
-  /// Get current user's display name
   String? get userName => _auth.currentUser?.displayName;
-
-  /// Get current user's email
   String? get userEmail => _auth.currentUser?.email;
-
-  /// Check if user is authenticated
   bool get isAuthenticated => _auth.currentUser != null;
 
   /// Create or reuse a session for the current user
@@ -34,7 +31,6 @@ class SleepAIService {
       throw Exception('User not authenticated');
     }
 
-    // Reuse existing session
     if (_cachedSessionId != null && _cachedSessionId!.isNotEmpty) {
       print('♻️ Reusing session: $_cachedSessionId');
       return _cachedSessionId!;
@@ -72,6 +68,7 @@ class SleepAIService {
       _cachedSessionId = sessionData['id'];
 
       print('✅ Session created: $_cachedSessionId');
+      _introMessageSent = false; // reset intro for new session
       return _cachedSessionId!;
     } catch (e) {
       print('❌ Session error: $e');
@@ -89,15 +86,24 @@ class SleepAIService {
       final currentUserId = userId;
       final sessionId = await _getOrCreateSession();
 
-      // Use the correct ADK /run endpoint with simplified payload
       final runUrl = Uri.parse('$baseUrl/run');
+
+      // ✅ Add intro message before first message of the session
+      String finalPrompt = prompt;
+      if (!_introMessageSent) {
+        final intro =
+            "This is my user id: $currentUserId.\nUser Name: ${userName ?? 'Unknown'}\nEmail: ${userEmail ?? 'Unknown'}\n"
+            "Start by greeting me briefly and asking about my sleep today.";
+        finalPrompt = "$intro\n\n$prompt";
+        _introMessageSent = true;
+        print('👋 Intro message sent with user info.');
+      }
 
       print('📤 Sending to: $runUrl');
       print('📤 User: $currentUserId');
       print('📤 Session: $sessionId');
-      print('📤 Message: $prompt');
+      print('📤 Message: $finalPrompt');
 
-      // Correct ADK request payload format
       final requestBody = {
         'app_name': appName,
         'user_id': currentUserId,
@@ -105,7 +111,7 @@ class SleepAIService {
         'new_message': {
           'role': 'user',
           'parts': [
-            {'text': prompt}
+            {'text': finalPrompt}
           ]
         },
       };
@@ -122,7 +128,7 @@ class SleepAIService {
         body: jsonEncode(requestBody),
       )
           .timeout(
-        const Duration(seconds: 60),
+        const Duration(seconds: 260),
         onTimeout: () {
           throw Exception('Request timeout after 60 seconds');
         },
@@ -132,12 +138,12 @@ class SleepAIService {
       print('📥 Response Body: ${runResponse.body}');
 
       if (runResponse.statusCode != 200 && runResponse.statusCode != 201) {
-        // Clear session on error
         if (runResponse.statusCode == 404 ||
             runResponse.statusCode == 400 ||
             runResponse.statusCode == 500) {
           print('⚠️ Error detected, clearing session cache');
           _cachedSessionId = null;
+          _introMessageSent = false;
         }
 
         return '⚠️ Server Error (${runResponse.statusCode})\n\n'
@@ -146,26 +152,35 @@ class SleepAIService {
             'Error: ${runResponse.body}';
       }
 
-      // Parse response
-      final decoded = jsonDecode(runResponse.body);
+      // Clean the raw response body before parsing
+      final cleanedBody = runResponse.body
+          .replaceAll(RegExp(r'data:\s*'), '')
+          .replaceAll(RegExp(r'event:\s*\w+'), '')
+          .replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '')
+          .trim();
+
+      dynamic decoded;
+      try {
+        decoded = jsonDecode(cleanedBody);
+      } catch (e) {
+        print('⚠️ JSON parse fallback, returning cleaned text');
+        return cleanedBody;
+      }
+
       print('📥 Parsed response: $decoded');
 
-      // Handle different response formats
       String? responseText;
 
-      // Format 1: Direct response field
       if (decoded is Map<String, dynamic>) {
         if (decoded['response'] != null) {
           responseText = decoded['response'].toString();
-        }
-        // Format 2: Events array
-        else if (decoded['events'] != null && decoded['events'] is List) {
+        } else if (decoded['events'] != null && decoded['events'] is List) {
           final events = decoded['events'] as List;
           for (var event in events.reversed) {
             if (event is Map<String, dynamic>) {
               if (event['content'] != null) {
-                if (event['content'] is Map) {
-                  final content = event['content'] as Map;
+                final content = event['content'];
+                if (content is Map) {
                   if (content['text'] != null) {
                     responseText = content['text'].toString();
                     break;
@@ -180,28 +195,21 @@ class SleepAIService {
                     }
                   }
                 } else {
-                  responseText = event['content'].toString();
+                  responseText = content.toString();
                   break;
                 }
-              }
-              if (event['text'] != null) {
+              } else if (event['text'] != null) {
                 responseText = event['text'].toString();
                 break;
               }
             }
           }
-        }
-        // Format 3: Content field
-        else if (decoded['content'] != null) {
+        } else if (decoded['content'] != null) {
           responseText = decoded['content'].toString();
-        }
-        // Format 4: Text field
-        else if (decoded['text'] != null) {
+        } else if (decoded['text'] != null) {
           responseText = decoded['text'].toString();
         }
-      }
-      // Format 5: Response is array
-      else if (decoded is List && decoded.isNotEmpty) {
+      } else if (decoded is List && decoded.isNotEmpty) {
         for (var item in decoded.reversed) {
           if (item is Map<String, dynamic>) {
             if (item['content'] != null) {
@@ -216,37 +224,45 @@ class SleepAIService {
         }
       }
 
+      // Final cleanup before returning to UI
       if (responseText != null && responseText.isNotEmpty) {
+        responseText = responseText
+            .replaceAll(RegExp(r'data:\s*'), '')
+            .replaceAll(RegExp(r'event:\s*\w+'), '')
+            .replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '')
+            .trim();
+
         return responseText;
       }
 
       print('⚠️ Could not extract response from: $decoded');
       return '🤔 Received a response but couldn\'t parse it.\n\n'
-          'Raw response: ${runResponse.body.substring(0, runResponse.body.length > 300 ? 300 : runResponse.body.length)}...';
+          'Raw response: ${cleanedBody.substring(0, cleanedBody.length > 300 ? 300 : cleanedBody.length)}...';
     } on FirebaseAuthException catch (e) {
       print('❌ Auth error: ${e.message}');
       _cachedSessionId = null;
+      _introMessageSent = false;
       return '⚠️ Authentication error: ${e.message}';
     } catch (e) {
       print('❌ Error: $e');
       _cachedSessionId = null;
+      _introMessageSent = false;
       return '⚠️ Error: $e\n\nPlease try again.';
     }
   }
 
-  /// Reset the session
   void resetSession() {
     _cachedSessionId = null;
+    _introMessageSent = false;
     print('🔄 Session reset');
   }
 
-  /// Clear all cached data
   void clearCache() {
     _cachedSessionId = null;
+    _introMessageSent = false;
     print('🧹 Cache cleared');
   }
 
-  /// Sign out helper
   Future<void> signOut() async {
     clearCache();
     await _auth.signOut();

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:clario/screens/sleep_chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -8,9 +9,13 @@ import 'sleep_report_screen.dart'; // Make sure this path is correct
 // For animations
 import 'sleep_input_screen.dart'; // Make sure this path is correct
 
-// --- 1. ADD THIS IMPORT ---
+// --- 1. ORIGINAL IMPORT ---
 import '../services/sleep_sounds_screen.dart'; // To navigate to your new screen
-// --- END OF ADDED IMPORT ---
+
+// --- 2. ADD THIS NEW IMPORT ---
+// (Make sure this path matches where your chat screen file is)
+import '../screens/sleep_chat_screen.dart';
+// --- END OF NEW IMPORT ---
 
 class SleepDashboardScreen extends StatefulWidget {
   const SleepDashboardScreen({Key? key}) : super(key: key);
@@ -20,8 +25,9 @@ class SleepDashboardScreen extends StatefulWidget {
 }
 
 class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
-  // --- ALL ORIGINAL STATE AND LOGIC ---
-  // (This is all your original code, unchanged)
+  // --- All your existing state and logic ---
+  // (initState, _fetchSleepData, etc. remain unchanged)
+  // ... (omitted for brevity) ...
 
   bool _loading = true;
   List<dynamic> _sleepData = [];
@@ -104,21 +110,19 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
     }
   }
 
-  // --- NEW UI WIDGETS ---
-  // This section contains the new, refactored UI.
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC), // Google-like app bg color
       appBar: _buildAppBar(),
       floatingActionButton: _buildFAB(),
-      body: _buildBody(), // <-- This is where we will add the card
+      body: _buildBody(),
     );
   }
 
   /// Builds the new white, Google-style AppBar
   PreferredSizeWidget _buildAppBar() {
+    // ... (Your existing _buildAppBar code, unchanged) ...
     return AppBar(
       title: const Text(
         "Sleep Analysis",
@@ -154,6 +158,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
 
   /// Builds the new "Add Sleep Data" Floating Action Button
   Widget _buildFAB() {
+    // ... (Your existing _buildFAB code, unchanged) ...
     return FloatingActionButton(
       onPressed: () {
         Navigator.push(
@@ -170,7 +175,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
     ).animate().scale(delay: 500.ms); // Simple animation
   }
 
-  // --- 2. EDIT THE _buildBody METHOD ---
+  // --- 3. EDIT THE _buildBody METHOD ---
   /// Builds the main body, handling loading and pull-to-refresh
   Widget _buildBody() {
     if (_loading) {
@@ -191,7 +196,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
               .fadeIn(duration: 400.ms)
               .slideY(begin: 0.1, end: 0),
 
-          // --- THIS IS THE NEW SECTION YOU ASKED FOR ---
+          // --- 2. Sleep Sounds Card (Existing) ---
           const SizedBox(height: 24),
           _buildHeader("Sleep Sounds"),
           const SizedBox(height: 8),
@@ -199,11 +204,20 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
               .animate()
               .fadeIn(duration: 400.ms, delay: 200.ms) // Staggered animation
               .slideY(begin: 0.1, end: 0),
+
+          // --- 3. (NEW) MCP AI CHAT CARD ---
+          const SizedBox(height: 24),
+          _buildHeader("AI Assistant"),
+          const SizedBox(height: 8),
+          _buildMcpChatCard() // This is your new widget
+              .animate()
+              .fadeIn(duration: 400.ms, delay: 300.ms) // Staggered animation
+              .slideY(begin: 0.1, end: 0),
           // --- END OF NEW SECTION ---
 
           const SizedBox(height: 24),
 
-          // --- 3. Recent Logs List (Existing) ---
+          // --- 4. Recent Logs List (Existing) ---
           _buildHeader("Recent Logs"),
           const SizedBox(height: 8),
           _buildSleepList(), // This will now build the expandable list
@@ -215,6 +229,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
 
   /// Helper for section headers (e.g., "Analysis Report")
   Widget _buildHeader(String title) {
+    // ... (Your existing _buildHeader code, unchanged) ...
     return Text(
       title,
       style: const TextStyle(
@@ -226,8 +241,8 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
   }
 
   /// This is the new widget that depicts the analysis report, as requested.
-  /// It combines all three of your original summary cards.
   Widget _buildAnalysisReportCard() {
+    // ... (Your existing _buildAnalysisReportCard code, unchanged) ...
     return Card(
       elevation: 2,
       shadowColor: Colors.black.withOpacity(0.1),
@@ -309,6 +324,7 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
   /// Helper widget for a single metric item inside the analysis card
   Widget _buildMetricItem(
       IconData icon, String label, String value, Color color) {
+    // ... (Your existing _buildMetricItem code, unchanged) ...
     return Row(
       children: [
         Icon(icon, color: color, size: 20),
@@ -327,11 +343,9 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
     );
   }
 
-  // --- 3. ADD THIS NEW HELPER METHOD ---
-  // (You can paste this right after your _buildMetricItem method)
-
   /// Builds a card to navigate to the Sleep Sounds screen
   Widget _buildSleepSoundsCard() {
+    // ... (Your existing _buildSleepSoundsCard code, unchanged) ...
     return Card(
       elevation: 2,
       shadowColor: Colors.black.withOpacity(0.1),
@@ -376,12 +390,63 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
       ),
     );
   }
+
+  // --- 4. ADD THIS NEW HELPER METHOD ---
+  // (You can paste this right after your _buildSleepSoundsCard method)
+
+  /// Builds a card to navigate to the MCP AI Chat screen
+  Widget _buildMcpChatCard() {
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      clipBehavior: Clip.antiAlias, // For the InkWell ripple effect
+      child: InkWell(
+        onTap: () {
+          // This is where you navigate to your chat screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SleepChatScreen()),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Icon(Icons.smart_toy_outlined, // New Icon
+                  color: Colors.teal.shade400,
+                  size: 36), // New Color
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "AI Assistant", // New Title
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "Chat with your MCP server AI.", // New Subtitle
+                      style: TextStyle(fontSize: 14, color: Colors.black54),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios,
+                  color: Colors.black38, size: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
   // --- END OF ADDED METHOD ---
 
-  // ---
-  // --- THIS IS THE NEW, REPLACED _buildSleepList ---
-  // ---
   Widget _buildSleepList() {
+    // ... (Your existing _buildSleepList code, unchanged) ...
+    // (omitted for brevity)
     if (_sleepData.isEmpty) {
       return const Center(
         child: Padding(
@@ -505,11 +570,8 @@ class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
     );
   }
 
-  // ---
-  // --- THESE 3 HELPER METHODS WERE ADDED ---
-  // ---
-
-  /// Helper function to parse lists (which might be Lists or Maps)
+  // --- All other helper methods (_parseList, _buildSectionHeader, _buildListItem) ---
+  // ... (remain unchanged) ...
   List<String> _parseList(dynamic data) {
     if (data == null) return [];
     if (data is List) {

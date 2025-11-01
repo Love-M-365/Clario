@@ -106,8 +106,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success && mounted) {
-        await NotificationService.initialize();
-        await NotificationService.setupPushNotifications();
         context.go('/home');
       } else if (mounted) {
         // Show an error message if login fails

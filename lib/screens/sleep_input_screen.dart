@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 
-const String kCloudFunctionEndpoint =
+/// ✅ Two different endpoints for your projects
+const String kRealtimeEndpoint =
+    'https://us-central1-clario-4558.cloudfunctions.net/storeSleepData';
+const String kCloudSqlEndpoint =
     'https://us-central1-clario-f60b0.cloudfunctions.net/storeSleepData';
 
 class SleepInputScreen extends StatefulWidget {
@@ -45,12 +48,14 @@ class _SleepInputScreenState extends State<SleepInputScreen> {
   }
 
   double _computeDurationHours(DateTime bedtime, DateTime wakeTime) {
-    if (wakeTime.isBefore(bedtime))
+    if (wakeTime.isBefore(bedtime)) {
       wakeTime = wakeTime.add(const Duration(days: 1));
+    }
     return wakeTime.difference(bedtime).inMinutes / 60.0;
   }
 
-  Future<void> _submitToCloudSql() async {
+  /// 🔹 This method sends the same data to BOTH endpoints
+  Future<void> _submitToBothDatabases() async {
     final bedtime = _combine(_bedDate, _bedTime);
     final wakeTime = _combine(_wakeDate, _wakeTime);
 
@@ -65,12 +70,9 @@ class _SleepInputScreenState extends State<SleepInputScreen> {
 
     try {
       final durationHours = _computeDurationHours(bedtime, wakeTime);
-
-      // Get Firebase user ID (if logged in)
       final user = FirebaseAuth.instance.currentUser;
       final userId = user?.uid ?? 'anonymous';
 
-      // Build the body exactly as expected by your Cloud Function
       final body = {
         'user_id': userId,
         'sleep_date': DateTime.now().toIso8601String(),
@@ -82,21 +84,35 @@ class _SleepInputScreenState extends State<SleepInputScreen> {
         'nightmares': _hadNightmares,
       };
 
-      final response = await http.post(
-        Uri.parse(kCloudFunctionEndpoint),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
-      );
+      /// ✅ Send requests to both projects in parallel
+      final responses = await Future.wait([
+        http.post(
+          Uri.parse(kRealtimeEndpoint),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        ),
+        http.post(
+          Uri.parse(kCloudSqlEndpoint),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        ),
+      ]);
 
-      if (response.statusCode == 200) {
+      /// ✅ Check if both succeeded
+      if (responses.every((r) => r.statusCode == 200)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Sleep data sent successfully!')),
+          const SnackBar(
+              content:
+                  Text('✅ Sleep data sent to both databases successfully!')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content:
-                  Text('❌ Failed: ${response.statusCode} ${response.body}')),
+            content: Text(
+              '⚠️ One or both requests failed:\n'
+              'Realtime: ${responses[0].statusCode}, Cloud SQL: ${responses[1].statusCode}',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -206,7 +222,7 @@ class _SleepInputScreenState extends State<SleepInputScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                onPressed: _loading ? null : _submitToCloudSql,
+                onPressed: _loading ? null : _submitToBothDatabases,
                 icon: _loading
                     ? const CircularProgressIndicator(strokeWidth: 2)
                     : const Icon(Icons.cloud_upload),

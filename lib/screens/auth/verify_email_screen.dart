@@ -40,8 +40,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       _timer?.cancel();
       if (mounted) {
         // Use go_router to navigate to the questionnaire screen
-        await NotificationService.initialize();
-        await NotificationService.setupPushNotifications();
+
         context.go('/home');
       }
     } else {
