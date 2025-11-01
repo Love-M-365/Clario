@@ -1,233 +1,497 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'sleep_report_screen.dart'; // Make sure this path is correct
+// For animations
+import 'sleep_input_screen.dart'; // Make sure this path is correct
 
-/// ✅ YOUR Cloud Function endpoint (you’ll deploy it as explained)
-/// Example: https://your-project-id-region.cloudfunctions.net/storeSleepData
-const String kCloudFunctionEndpoint =
-    'https://us-central1-clario-f60b0.cloudfunctions.net/storeSleepData';
-
-class SleepInputScreen extends StatefulWidget {
-  const SleepInputScreen({Key? key}) : super(key: key);
+class SleepDashboardScreen extends StatefulWidget {
+  const SleepDashboardScreen({Key? key}) : super(key: key);
 
   @override
-  State<SleepInputScreen> createState() => _SleepInputScreenState();
+  State<SleepDashboardScreen> createState() => _SleepDashboardScreenState();
 }
 
-class _SleepInputScreenState extends State<SleepInputScreen> {
-  DateTime? _bedDate;
-  TimeOfDay? _bedTime;
-  DateTime? _wakeDate;
-  TimeOfDay? _wakeTime;
+class _SleepDashboardScreenState extends State<SleepDashboardScreen> {
+  // --- ALL ORIGINAL STATE AND LOGIC ---
+  // (This is all your original code, unchanged)
 
-  String _sleepQuality = 'good';
-  double _stressLevel = 5.0;
-  bool _hadNightmares = false;
-  bool _loading = false;
+  bool _loading = true;
+  List<dynamic> _sleepData = [];
+  double _averageSleep = 0;
+  double _averageStress = 0;
+  int _nightmareCount = 0;
 
-  final _formKey = GlobalKey<FormState>();
+  final String endpoint =
+      'https://us-central1-clario-f60b0.cloudfunctions.net/getSleepData';
 
-  Future<DateTime?> _pickDate(BuildContext ctx, DateTime initial) async {
-    return await showDatePicker(
-      context: ctx,
-      initialDate: initial,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _fetchSleepData();
   }
 
-  Future<TimeOfDay?> _pickTime(BuildContext ctx, TimeOfDay initial) async {
-    return await showTimePicker(context: ctx, initialTime: initial);
-  }
-
-  DateTime? _combine(DateTime? d, TimeOfDay? t) {
-    if (d == null || t == null) return null;
-    return DateTime(d.year, d.month, d.day, t.hour, t.minute);
-  }
-
-  double _computeDurationHours(DateTime bedtime, DateTime wakeTime) {
-    if (wakeTime.isBefore(bedtime))
-      wakeTime = wakeTime.add(const Duration(days: 1));
-    return wakeTime.difference(bedtime).inMinutes / 60.0;
-  }
-
-  Future<void> _submitToCloudSql() async {
-    final bedtime = _combine(_bedDate, _bedTime);
-    final wakeTime = _combine(_wakeDate, _wakeTime);
-
-    if (bedtime == null || wakeTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please pick both bedtime and wake time')),
-      );
-      return;
+  Future<void> _fetchSleepData() async {
+    // Show loading spinner only if it's not a refresh
+    if (!_loading) {
+      setState(() {}); // Allows refresh indicator to show
     }
 
-    setState(() => _loading = true);
-
     try {
-      final durationHours = _computeDurationHours(bedtime, wakeTime);
-
-      // Get Firebase user ID (if logged in)
+      // --- FIX FOR SECURE CLOUD FUNCTION ---
+      // We need to get the user and token to make a secure call
       final user = FirebaseAuth.instance.currentUser;
-      final userId = user?.uid ?? 'anonymous';
+      if (user == null) {
+        throw Exception("User not logged in.");
+      }
+      final userId = user.uid;
+      final idToken = await user.getIdToken();
+      // --- END OF FIX ---
 
-      // Build the body exactly as expected by your Cloud Function
-      final body = {
-        'user_id': userId,
-        'sleep_date': DateTime.now().toIso8601String(),
-        'bedtime': bedtime.toIso8601String(),
-        'wake_time': wakeTime.toIso8601String(),
-        'sleep_duration_hours': double.parse(durationHours.toStringAsFixed(2)),
-        'sleep_quality': _sleepQuality,
-        'stress_level': _stressLevel.toInt(),
-        'nightmares': _hadNightmares,
-      };
-
-      final response = await http.post(
-        Uri.parse(kCloudFunctionEndpoint),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
+      final response = await http.get(
+        Uri.parse('$endpoint?user_id=$userId'), // user_id is a fallback
+        headers: {
+          'Authorization': 'Bearer $idToken', // This is the secure way
+        },
       );
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Sleep data sent successfully!')),
-        );
+        final data = jsonDecode(response.body);
+
+        setState(() {
+          _sleepData = data;
+          if (_sleepData.isNotEmpty) {
+            _averageSleep = _sleepData
+                    .map((e) => (e['sleep_duration_hours'] ?? 0).toDouble())
+                    .reduce((a, b) => a + b) /
+                _sleepData.length;
+
+            _averageStress = _sleepData
+                    .map((e) => (e['stress_level'] ?? 0).toDouble())
+                    .reduce((a, b) => a + b) /
+                _sleepData.length;
+
+            _nightmareCount = _sleepData
+                .where((e) => e['nightmares'] == true)
+                .toList()
+                .length;
+          } else {
+            // Reset stats if no data
+            _averageSleep = 0;
+            _averageStress = 0;
+            _nightmareCount = 0;
+          }
+          _loading = false;
+        });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('❌ Failed: ${response.statusCode} ${response.body}')),
-        );
+        throw Exception('Failed to fetch data: ${response.body}');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('⚠️ Error: $e')),
-      );
-    } finally {
+      print("Error fetching data: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('⚠️ Error: $e')),
+        );
+      }
       setState(() => _loading = false);
     }
   }
 
+  // --- NEW UI WIDGETS ---
+  // This section contains the new, refactored UI.
+
   @override
   Widget build(BuildContext context) {
-    final today = DateTime.now();
-    final defaultTime = const TimeOfDay(hour: 23, minute: 0);
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Log Sleep')),
-      body: Padding(
+      backgroundColor: const Color(0xFFF9FAFC), // Google-like app bg color
+      appBar: _buildAppBar(),
+      floatingActionButton: _buildFAB(),
+      body: _buildBody(),
+    );
+  }
+
+  /// Builds the new white, Google-style AppBar
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: const Text(
+        "Sleep Analysis",
+        style: TextStyle(
+          color: Colors.black87,
+          fontWeight: FontWeight.bold,
+          fontSize: 22,
+        ),
+      ),
+      backgroundColor: Colors.white,
+      elevation: 0, // Flat, modern look
+      centerTitle: false,
+      actions: [
+        // Refresh button
+        IconButton(
+          icon: const Icon(Icons.assessment_outlined, color: Colors.black54),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const WeeklySleepReportScreen()),
+            );
+          },
+          tooltip: 'View AI Reports',
+        ),
+        IconButton(
+          icon: const Icon(Icons.refresh, color: Colors.black54),
+          onPressed: _loading ? null : _fetchSleepData,
+        ),
+      ],
+    );
+  }
+
+  /// Builds the new "Add Sleep Data" Floating Action Button
+  Widget _buildFAB() {
+    return FloatingActionButton(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                const SleepInputScreen(), // Assumes this is your screen name
+          ),
+        );
+        // Removed the placeholder SnackBar
+      },
+      backgroundColor: Colors.blue.shade700, // Google Blue
+      child: const Icon(Icons.add, color: Colors.white, size: 28),
+    ).animate().scale(delay: 500.ms); // Simple animation
+  }
+
+  /// Builds the main body, handling loading and pull-to-refresh
+  Widget _buildBody() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Pull-to-refresh
+    return RefreshIndicator(
+      onRefresh: _fetchSleepData,
+      child: ListView(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              ListTile(
-                title: const Text('Bed Date'),
-                subtitle: Text(_bedDate == null
-                    ? 'Not set'
-                    : _bedDate!.toLocal().toString().split(' ')[0]),
-                trailing: IconButton(
-                  icon: const Icon(Icons.calendar_today),
-                  onPressed: () async {
-                    final picked = await _pickDate(context, today);
-                    if (picked != null) setState(() => _bedDate = picked);
-                  },
-                ),
-              ),
-              ListTile(
-                title: const Text('Bed Time'),
-                subtitle: Text(
-                    _bedTime == null ? 'Not set' : _bedTime!.format(context)),
-                trailing: IconButton(
-                  icon: const Icon(Icons.access_time),
-                  onPressed: () async {
-                    final picked = await _pickTime(context, defaultTime);
-                    if (picked != null) setState(() => _bedTime = picked);
-                  },
-                ),
-              ),
-              const Divider(),
-              ListTile(
-                title: const Text('Wake Date'),
-                subtitle: Text(_wakeDate == null
-                    ? 'Not set'
-                    : _wakeDate!.toLocal().toString().split(' ')[0]),
-                trailing: IconButton(
-                  icon: const Icon(Icons.calendar_today_outlined),
-                  onPressed: () async {
-                    final picked = await _pickDate(context, today);
-                    if (picked != null) setState(() => _wakeDate = picked);
-                  },
-                ),
-              ),
-              ListTile(
-                title: const Text('Wake Time'),
-                subtitle: Text(
-                    _wakeTime == null ? 'Not set' : _wakeTime!.format(context)),
-                trailing: IconButton(
-                  icon: const Icon(Icons.access_time_outlined),
-                  onPressed: () async {
-                    final picked = await _pickTime(
-                        context, const TimeOfDay(hour: 7, minute: 0));
-                    if (picked != null) setState(() => _wakeTime = picked);
-                  },
-                ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _sleepQuality,
-                decoration: const InputDecoration(labelText: 'Sleep Quality'),
-                items: const [
-                  DropdownMenuItem(value: 'good', child: Text('Good')),
-                  DropdownMenuItem(value: 'fair', child: Text('Fair')),
-                  DropdownMenuItem(value: 'poor', child: Text('Poor')),
-                ],
-                onChanged: (v) => setState(() => _sleepQuality = v ?? 'good'),
-              ),
-              const SizedBox(height: 12),
-              Column(
+        children: [
+          // --- 1. Analysis Report Card (NEW) ---
+          _buildHeader("Analysis Report"),
+          const SizedBox(height: 8),
+          _buildAnalysisReportCard()
+              .animate()
+              .fadeIn(duration: 400.ms)
+              .slideY(begin: 0.1, end: 0),
+
+          const SizedBox(height: 24),
+
+          // --- 2. Recent Logs List ---
+          _buildHeader("Recent Logs"),
+          const SizedBox(height: 8),
+          _buildSleepList(), // This will now build the expandable list
+        ],
+      ),
+    );
+  }
+
+  /// Helper for section headers (e.g., "Analysis Report")
+  Widget _buildHeader(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: Colors.black87,
+      ),
+    );
+  }
+
+  /// This is the new widget that depicts the analysis report, as requested.
+  /// It combines all three of your original summary cards.
+  Widget _buildAnalysisReportCard() {
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- Metrics Column ---
+            Expanded(
+              flex: 3,
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Stress Level (0 = low, 10 = high)'),
-                  Slider(
-                    min: 0,
-                    max: 10,
-                    divisions: 10,
-                    value: _stressLevel,
-                    label: _stressLevel.toInt().toString(),
-                    onChanged: (v) => setState(() => _stressLevel = v),
+                  const Text(
+                    "Weekly Averages", // Note: This is based on all data fetched
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildMetricItem(
+                    Icons.timelapse,
+                    'Average Sleep',
+                    "${_averageSleep.toStringAsFixed(1)} hrs",
+                    Colors.blue.shade700,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMetricItem(
+                    Icons.self_improvement,
+                    'Average Stress',
+                    _averageStress.toStringAsFixed(1),
+                    Colors.orange.shade700,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMetricItem(
+                    Icons.warning_amber_rounded,
+                    'Nightmares',
+                    '$_nightmareCount times',
+                    Colors.red.shade600,
                   ),
                 ],
               ),
-              SwitchListTile(
-                title: const Text('Had nightmares'),
-                value: _hadNightmares,
-                onChanged: (v) => setState(() => _hadNightmares = v),
+            ),
+            // --- Chart Placeholder ---
+            Expanded(
+              flex: 2,
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.05),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    // Placeholder for a chart. You can replace this with a real chart widget.
+                    child: CircularProgressIndicator(
+                      value: _averageSleep / 10, // Example: 8/10 hours
+                      strokeWidth: 6,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(Colors.blue.shade700),
+                      backgroundColor: Colors.blue.shade100,
+                    ),
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _loading ? null : _submitToCloudSql,
-                icon: _loading
-                    ? const CircularProgressIndicator(strokeWidth: 2)
-                    : const Icon(Icons.cloud_upload),
-                label: Text(_loading ? 'Sending...' : 'Submit Sleep Data'),
-              ),
-              const SizedBox(height: 20),
-              Builder(builder: (ctx) {
-                final bedtime = _combine(_bedDate, _bedTime);
-                final wakeTime = _combine(_wakeDate, _wakeTime);
-                if (bedtime != null && wakeTime != null) {
-                  final d = _computeDurationHours(bedtime, wakeTime);
-                  return Text(
-                      '🕒 Estimated sleep duration: ${d.toStringAsFixed(2)} hours');
-                }
-                return const SizedBox.shrink();
-              }),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Helper widget for a single metric item inside the analysis card
+  Widget _buildMetricItem(
+      IconData icon, String label, String value, Color color) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: const TextStyle(fontSize: 14, color: Colors.black54)),
+            Text(value,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ---
+  // --- THIS IS THE NEW, REPLACED _buildSleepList ---
+  // ---
+  Widget _buildSleepList() {
+    if (_sleepData.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: Text(
+            "No sleep data found.\nTap the '+' button to add your first log.",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: Colors.black54),
           ),
         ),
+      );
+    }
+
+    // We return a Column because this is already inside a ListView
+    return Column(
+      children: _sleepData.map((d) {
+        // --- 1. Extract all the sleep data ---
+        final date =
+            DateFormat('MMM d, yyyy').format(DateTime.parse(d['sleep_date']));
+        final duration = d['sleep_duration_hours'] ?? 0.0;
+        final quality = d['sleep_quality'] ?? 'N/A';
+        final stress = d['stress_level'] ?? 0;
+        final hadNightmare = (d['nightmares'] ?? false);
+
+        // --- 2. Extract all the daily AI analysis data ---
+        final analysis = d['analysis'] ?? {};
+        final aiData = analysis['ai'] ?? {};
+        final aiSummary = aiData['summary'] ?? '';
+        final suggestions = _parseList(aiData['suggestions']);
+        final interventions = _parseList(aiData['interventions']);
+        final bool hasAiData = aiSummary.isNotEmpty ||
+            suggestions.isNotEmpty ||
+            interventions.isNotEmpty;
+
+        // --- 3. Build the new ExpansionTile ---
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          elevation: 1,
+          shadowColor: Colors.black.withOpacity(0.05),
+          color: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          clipBehavior: Clip.antiAlias, // Ensures the tile clips neatly
+          child: ExpansionTile(
+            // --- The "Header" part (always visible) ---
+            leading: Icon(
+              Icons.bedtime_outlined,
+              color: Colors.blue.shade300,
+              size: 32,
+            ),
+            title: Text(
+              date,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            subtitle: Text(
+              '${duration.toStringAsFixed(1)} hrs | Quality: $quality | Stress: $stress',
+              style: const TextStyle(fontSize: 13, color: Colors.black54),
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: hadNightmare
+                ? Icon(Icons.warning_amber_rounded,
+                    color: Colors.redAccent.shade400)
+                : const Icon(Icons.expand_more, color: Colors.black54),
+
+            // --- The "Expanded" part (hidden by default) ---
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Show the AI Summary first
+                    if (aiSummary.isNotEmpty)
+                      Text(
+                        aiSummary,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.black87,
+                          height: 1.4,
+                        ),
+                      ),
+
+                    // Show Daily Suggestions
+                    if (suggestions.isNotEmpty) ...[
+                      const Divider(height: 24),
+                      _buildSectionHeader(Icons.lightbulb_outline,
+                          "Daily Suggestions", Colors.orange),
+                      const SizedBox(height: 8),
+                      ...suggestions.map((s) => _buildListItem(s)),
+                    ],
+
+                    // Show Daily Interventions
+                    if (interventions.isNotEmpty) ...[
+                      const Divider(height: 24),
+                      _buildSectionHeader(Icons.healing_outlined,
+                          "Daily Interventions", Colors.green),
+                      const SizedBox(height: 8),
+                      ...interventions.map((i) => _buildListItem(i)),
+                    ],
+
+                    // Fallback message
+                    if (!hasAiData)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text(
+                          "No specific AI feedback for this entry.",
+                          style: TextStyle(color: Colors.black54),
+                        ),
+                      ),
+                  ],
+                ),
+              )
+            ],
+          ),
+        )
+            .animate()
+            .fadeIn(delay: (100 * _sleepData.indexOf(d)).ms)
+            .slideX(begin: -0.1, end: 0);
+      }).toList(),
+    );
+  }
+
+  // ---
+  // --- THESE 3 HELPER METHODS WERE ADDED ---
+  // ---
+
+  /// Helper function to parse lists (which might be Lists or Maps)
+  List<String> _parseList(dynamic data) {
+    if (data == null) return [];
+    if (data is List) {
+      // It's already a list
+      return data.map((e) => e.toString()).toList();
+    }
+    if (data is Map) {
+      // It's a map like {"0": "text", "1": "text"}
+      // Sort by key to keep order
+      var sortedKeys = data.keys.toList()..sort();
+      return sortedKeys.map((k) => data[k].toString()).toList();
+    }
+    return []; // Not a list or map, return empty
+  }
+
+  // Helper for section headers
+  Widget _buildSectionHeader(IconData icon, String title, MaterialColor color) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color.shade800,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper for bulleted list items (Fixes UI Overflow)
+  Widget _buildListItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("• ",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 15, color: Colors.black87),
+            ),
+          ),
+        ],
       ),
     );
   }

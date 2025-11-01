@@ -53,7 +53,7 @@ class _MainNavigationState extends State<MainNavigation> {
       label: 'Journal',
     ),
     _BottomNavItem(
-      screen: const SleepInputScreen(),
+      screen: const SleepDashboardScreen(),
       icon: Icons.bedtime_rounded,
       label: 'Sleep',
     ),
@@ -189,5 +189,30 @@ class CustomBottomNavBar extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class MainNavigationWithIndex extends StatefulWidget {
+  final int initialIndex;
+  const MainNavigationWithIndex({super.key, this.initialIndex = 0});
+
+  @override
+  State<MainNavigationWithIndex> createState() =>
+      _MainNavigationWithIndexState();
+}
+
+class _MainNavigationWithIndexState extends State<MainNavigationWithIndex> {
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Reuse your existing nav items setup
+    return MainNavigation(); // You can reuse your existing structure if needed
   }
 }

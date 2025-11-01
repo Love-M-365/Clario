@@ -17,6 +17,7 @@ dependencies:
   firebase_database: ^12.0.1
   firebase_storage: ^13.0.1
   google_sign_in: ^6.2.1 #ish
+  firebase_messaging: 16.0.3
   # State Management
   provider: ^6.1.1
   pedometer: ^4.0.1

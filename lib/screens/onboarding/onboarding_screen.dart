@@ -59,7 +59,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Empty Chair Sessions',
       description:
           'Talk to your thoughts in a safe space. A feature to help you express and heal.',
-      imagePath: 'assets/images/onboarding_chair.png', // Example path
+      imagePath: 'assets/images/onboarding_chair.jpg', // Example path
       color: const Color(0xFF2E86AB),
     ),
   ];

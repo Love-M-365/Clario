@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 
-/// ✅ YOUR Cloud Function endpoint (you’ll deploy it as explained)
-/// Example: https://your-project-id-region.cloudfunctions.net/storeSleepData
 const String kCloudFunctionEndpoint =
     'https://us-central1-clario-f60b0.cloudfunctions.net/storeSleepData';
 
