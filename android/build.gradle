@@ -16,11 +16,7 @@ allprojects {
         mavenCentral()
     }
 
-    // --- THIS IS THE FIX ---
-    // This code finds every single Java and Kotlin compile task in the
-    // entire project (including all subprojects like :workmanager_android) 
-    // and forces them to use Java 17. This resolves the incompatibility.
-
+    // ✅ Force Java 17 globally
     tasks.withType(JavaCompile).configureEach {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -35,13 +31,23 @@ allprojects {
 
 rootProject.buildDir = '../build'
 
-// We no longer need the 'afterEvaluate' logic here, 
-// as the 'allprojects' block above is more direct.
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
+
+    // ✅ FORCE all subprojects (like usage_stats) to use latest SDKs
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            project.android {
+                compileSdkVersion 36
+                defaultConfig {
+                    targetSdkVersion 36
+                    minSdkVersion 26
+                }
+            }
+        }
+    }
 }
 
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
-

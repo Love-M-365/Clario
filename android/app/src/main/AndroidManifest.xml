@@ -43,7 +43,7 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <service android:name="com.dexterous.flutterlocalnotifications.FlutterLocalNotificationsPlugin" />
+        
 
         <service android:name="com.ryanheise.audioservice.AudioService"
             android:foregroundServiceType="mediaPlayback"

@@ -13,16 +13,11 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 import './screens/home/main_navigation.dart';
-// ✅ Import your main navigation
 
-// --- ADDED IMPORTS FOR AUDIO SERVICE ---
 import 'package:audio_service/audio_service.dart';
-import './audio_handler.dart'; // The file we created for background audio
-// --- END ADDED IMPORTS ---
+import './audio_handler.dart';
 
-// --- GLOBAL AUDIO HANDLER ---
 late MyAudioHandler audioHandler;
-// --- END GLOBAL AUDIO HANDLER ---
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -37,7 +32,6 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    // ✅ Initialize Firebase Cloud Messaging
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     final fcm = FirebaseMessaging.instance;
     await fcm.requestPermission();
@@ -47,10 +41,9 @@ void main() async {
     print('Firebase initialization error: $e');
   }
 
-  // ✅ Ensure audioHandler is always initialized before app starts
   try {
     audioHandler = await AudioService.init(
-      builder: () => MyAudioHandler(), // From audio_handler.dart
+      builder: () => MyAudioHandler(),
       config: const AudioServiceConfig(
         androidNotificationChannelId: 'com.example.clario.audio',
         androidNotificationChannelName: 'Clario Sleep Sounds',
@@ -61,7 +54,7 @@ void main() async {
     print('🎧 AudioService initialized successfully');
   } catch (e) {
     print('AudioService initialization error: $e');
-    // 👇 Fallback: still assign a dummy instance to prevent LateInitializationError
+
     audioHandler = MyAudioHandler();
   }
 
@@ -82,7 +75,6 @@ class _ClarionAppState extends State<ClarionApp> {
   void initState() {
     super.initState();
 
-    // 🔹 Foreground notifications (Existing code, unchanged)
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final title = message.notification?.title ?? 'Sleep Update';
       final body =
@@ -98,13 +90,11 @@ class _ClarionAppState extends State<ClarionApp> {
       });
     });
 
-    // 🔹 Notification taps (Existing code, unchanged)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       print('🟢 Notification tapped — opening Sleep tab...');
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          // ✅ Navigate to MainNavigation and switch to the Sleep tab
           _navKey.currentState?.pushAndRemoveUntil(
             MaterialPageRoute(
               builder: (_) => const MainNavigationWrapper(initialIndex: 3),

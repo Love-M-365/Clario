@@ -24,9 +24,6 @@ LOCATION = "us-central1"
 GEMINI_MODEL_CHAT = "gemini-pro" # Model for chat
 GEMINI_MODEL_ANALYSIS = "gemini-pro"# Model for sentiment analysis
 
-# --- NEW ADDITION: Secret for Daily Quote Cron Job ---
-# A secret key to prevent unauthorized calls to the cron job
-# Set this as an environment variable 'DAILY_QUOTE_SECRET' in your deployment
 CRON_SECRET = os.environ.get("DAILY_QUOTE_SECRET", "REPLACE_THIS_WITH_A_REAL_SECRET")
 # --- END NEW ADDITION ---
 
@@ -279,44 +276,67 @@ def analyzeMood(req):
         # This catches errors *within* analyzeMood, not necessarily in the helper
         print(f"Unexpected error in analyzeMood function: {e}")
         return ("Internal Server Error", 500, headers)
-
-# --- Cloud Function: generateAvatar (Keep as is) ---
 @functions_framework.http
 def generateAvatar(req):
-    """Generates an avatar using Vertex AI Imagen and returns it as base64."""
-    # ... (Keep existing generateAvatar function code exactly as it was) ...
+    """Generates an avatar with fallback to safe prompt if filters trigger."""
     decoded_token = verify_token(req)
-    if not decoded_token: return ("Unauthorized", 401)
+    if not decoded_token:
+        return ("Unauthorized", 401)
 
-    if req.method == "OPTIONS": # CORS
-        headers = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Access-Control-Max-Age": "3600"}
-        return ("", 204, headers)
     headers = {"Access-Control-Allow-Origin": "*"}
+    if req.method == "OPTIONS":
+        headers.update({
+            "Access-Control-Allow-Methods": "POST",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Max-Age": "3600"
+        })
+        return ("", 204, headers)
 
-    if not req.is_json: return ("Request must be JSON", 400, headers)
-    try:
-        request_json = req.get_json(silent=True)
-        prompt = request_json['prompt']
-        if not prompt: return ("'prompt' field cannot be empty", 400, headers)
-    except (TypeError, KeyError): return ("Bad Request: JSON payload must include a 'prompt'", 400, headers)
+    if not req.is_json:
+        return ("Request must be JSON", 400, headers)
+
+    data = req.get_json(silent=True)
+    prompt = data.get("prompt", "").strip()
+    if not prompt:
+        return ("'prompt' cannot be empty", 400, headers)
+
+    # --- SANITIZE PROMPT ---
+    safe_prompt = sanitize_prompt(prompt)
 
     try:
         vertexai.init(project=PROJECT_ID, location=LOCATION)
         model = ImageGenerationModel.from_pretrained("imagegeneration@006")
-        print(f"generateAvatar: User {decoded_token.get('uid', 'unknown')}, Prompt: '{prompt[:50]}...'")
-        response_object = model.generate_images(prompt=prompt, number_of_images=1, aspect_ratio="1:1")
-        generated_images_list = response_object.images
-        if not generated_images_list:
-             print(f"Error: Imagen returned no images. Prompt: '{prompt}'. Safety filters?")
-             return (jsonify({"error": "Image generation failed (Imagen), possibly due to safety filters."}), 500, headers)
-        image_bytes = generated_images_list[0]._image_bytes
-        base64_image = base64.b64encode(image_bytes).decode('utf-8')
-        print(f"generateAvatar: Success for user {decoded_token.get('uid', 'unknown')}")
-        return (jsonify({"image_base64": base64_image}), 200, headers)
-    except Exception as e:
-        print(f"Error generating image via Imagen: {e}")
-        return (jsonify({"error": f"Internal server error during image generation: {str(e)}"}), 500, headers)
+        response = model.generate_images(prompt=safe_prompt, number_of_images=1, aspect_ratio="1:1")
+        if not response.images:
+            # fallback prompt if blocked
+            print("⚠️ Safety filter triggered. Retrying with neutral prompt.")
+            fallback_prompt = "A friendly abstract avatar of a person in cartoon style"
+            response = model.generate_images(prompt=fallback_prompt, number_of_images=1, aspect_ratio="1:1")
 
+        image_bytes = response.images[0]._image_bytes
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        return (jsonify({"image_base64": base64_image}), 200, headers)
+
+    except Exception as e:
+        print("Avatar generation failed:", e)
+        # final fallback → your static default avatar
+        with open("default_avatar_base64.txt", "r") as f:
+            default_avatar = f.read().strip()
+        return (jsonify({"image_base64": default_avatar}), 200, headers)
+
+
+# --- HELPER FUNCTION: prompt sanitizer ---
+def sanitize_prompt(prompt: str) -> str:
+    """Cleans unsafe or ambiguous prompts before sending to Imagen."""
+    import re
+    blocked_words = [
+        "nude", "blood", "weapon", "kill", "death", "violence",
+        "drug", "sex", "hate", "nsfw", "gun", "murder", "war"
+    ]
+    clean = re.sub(r"|".join(blocked_words), "peaceful", prompt, flags=re.IGNORECASE)
+    # add neutral style context
+    clean += " | high quality portrait in digital art style, neutral lighting"
+    return clean
 
 # --- Flask Routes (Keep as is) ---
 @app.route("/chat", methods=["POST"])
