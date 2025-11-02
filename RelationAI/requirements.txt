@@ -1,0 +1,7 @@
+Flask
+firebase-admin
+google-cloud-firestore
+google-cloud-aiplatform
+google-cloud-core
+google-genai
+gunicorn
