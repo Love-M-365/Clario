@@ -1,0 +1,248 @@
+# test_genai_chat.py
+import json
+import os
+from datetime import datetime, timezone
+from google import genai
+from google.cloud import firestore
+
+# ------------------ CONFIG ------------------
+PROJECT_ID = "clario-f6c36"
+LOCATION = "us-central1"
+MODEL = "gemini-2.5-flash"
+
+HISTORY_FILE = "chat_history.json"
+MEMORY_FILE = "memory_summary.txt"
+MAX_RECENT = 8
+SUMMARY_TRIGGER = 10
+# --------------------------------------------
+
+# Initialize Vertex AI + Firestore client
+client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
+db = firestore.Client(project=PROJECT_ID)
+
+# Utilities for local persistence -------------------
+def load_history():
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+def save_history(history):
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+
+def load_memory_summary():
+    if os.path.exists(MEMORY_FILE):
+        with open(MEMORY_FILE, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    return ""
+
+def save_memory_summary(text):
+    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+        f.write(text)
+
+# ---------------- Firestore helpers ----------------
+def get_user_profile(user_id):
+    doc_ref = db.collection("users").document(user_id)
+    doc = doc_ref.get()
+    if doc.exists:
+        return doc.to_dict()
+    return None
+
+def save_user_profile(user_id, profile_data):
+    doc_ref = db.collection("users").document(user_id)
+    doc_ref.set(profile_data)
+
+def save_chat_message(user_id: str, role: str, text: str):
+    """Save each chat turn under /users/{userId}/chats/"""
+    try:
+        chat_ref = db.collection("users").document(user_id).collection("chats").document()
+        chat_ref.set({
+            "role": role,
+            "text": text,
+            "ts": datetime.now(timezone.utc)
+        })
+    except Exception as e:
+        print("⚠️ Firestore chat save failed:", e)
+
+# ---------------- Relation mapping ----------------
+def update_relations(user_id, user_message):
+    """Analyze message for people mentioned and update Firestore relation map"""
+    analysis_prompt = f"""
+    From this message, extract if the user is talking about another person.
+    Return JSON with keys: name (if any), sentiment ("conflict", "supportive", or "neutral").
+    Message: {user_message}
+    """
+
+    try:
+        resp = client.models.generate_content(model=MODEL, contents=analysis_prompt)
+        analysis = json.loads(resp.candidates[0].content.parts[0].text)
+    except Exception:
+        return  # skip if JSON invalid or model fails
+
+    if "name" in analysis and analysis["name"]:
+        relations_ref = db.collection("users").document(user_id).collection("relations").document(analysis["name"])
+        doc = relations_ref.get()
+        if doc.exists:
+            data = doc.to_dict()
+            data["times_mentioned"] = data.get("times_mentioned", 0) + 1
+            data["last_mentioned"] = datetime.now(timezone.utc).isoformat()
+            data["sentiment"] = analysis["sentiment"]  # latest sentiment
+            relations_ref.set(data)
+        else:
+            relations_ref.set({
+                "name": analysis["name"],
+                "sentiment": analysis["sentiment"],
+                "times_mentioned": 1,
+                "last_mentioned": datetime.now(timezone.utc).isoformat()
+            })
+
+# ---------------- Onboarding ----------------
+ONBOARDING_QUESTIONS = [
+    "What’s your name (or nickname you’d like me to use)?",
+    "How old are you?",
+    "What’s your gender/pronouns (optional)?",
+    "How are you feeling today on a scale of 1–10?",
+    "Do you currently feel stressed, anxious, or low?",
+    "Have you ever spoken to a therapist or counselor before?",
+    "What would you like me to help you with the most?",
+    "Are there specific areas of your life you’d like to improve?",
+    "Who are the most important people in your life?",
+    "Would you like me to track interactions/conflicts with specific people?",
+    "How many hours of sleep do you usually get?",
+    "Do you exercise regularly?",
+    "Do you practice meditation, journaling, or other self-care habits?",
+    "Do you want me to check in if I notice you sound very sad, anxious, or hopeless?",
+    "Do you have a trusted person I should remind you to reach out to if you’re feeling very low? If yes, who?",
+    "Do you prefer short, friendly chats or longer, deeper conversations?",
+    "Is there anything you don’t want me to talk about?"
+]
+
+def run_onboarding(user_id):
+    print("\n👋 Welcome! Let’s set up your Clario profile so I can support you better.")
+    profile_data = {}
+    for q in ONBOARDING_QUESTIONS:
+        answer = input(q + "\n> ").strip()
+        profile_data[q] = answer
+    profile_data["created_at"] = datetime.now(timezone.utc).isoformat()
+
+    save_user_profile(user_id, profile_data)
+    print("\n✅ Thanks! Your profile has been saved. Let’s start chatting.")
+    return profile_data
+
+# ---------------- Prompt building ----------------
+def build_prompt(memory_summary, history, profile):
+    system_instructions = (
+        "You are Clario — a compassionate, evidence-informed mental health companion. "
+        "Behave like a supportive therapist and best friend: validate feelings, ask clarifying questions. "
+        "Speak in a warm, conversational tone like a supportive best friend. "
+        "Keep responses concise — about 3 to 6 sentences, not too long or too short. "
+        "Prioritize empathy: listen, validate feelings, and ask gentle clarifying questions. "
+
+        "Do not suggest any exercises immediately after the first mention of a problem. "
+        "First, ask at least one clarifying question to understand what happened and how the user feels. "
+        "Only after the user shares more details, gently suggest one exercise if relevant. "
+
+        "When suggesting an exercise, name the technique, explain it in 2–3 simple steps, "
+        "and briefly explain why it helps. Offer only one per response. "
+
+        "Use these mappings as guidance:\n"
+        "- If the user repeatedly describes guilt, conflict, fights, or frustration with someone important "
+        "→ first ask clarifying questions, then suggest the Empty Chair Technique.\n"
+        "- If the user feels anxious or panicky → suggest a grounding technique (e.g., 5-4-3-2-1).\n"
+        "- If the user feels overwhelmed or overloaded → suggest deep breathing or short journaling.\n"
+        "- If the user feels hopeless or self-critical → suggest gentle reframing or affirmations.\n"
+
+        "If the user mentions risk of self-harm or crisis, respond with care and direct them to "
+        "immediately seek emergency help or professional support.\n\n"
+    )
+
+    parts = [system_instructions]
+
+    if profile:
+        parts.append("User profile:\n" + json.dumps(profile, indent=2) + "\n")
+
+    if memory_summary:
+        parts.append("Memory summary:\n" + memory_summary + "\n")
+
+    recent = history[-MAX_RECENT*2:] if history else []
+    if recent:
+        parts.append("Recent conversation:")
+        for turn in recent:
+            parts.append(f"{turn.get('role').upper()} ({turn.get('ts')}): {turn.get('text')}")
+        parts.append("")
+
+    parts.append("Now respond to the user's latest message in a helpful, empathetic, and practical way.")
+    return "\n".join(parts)
+
+# ---------------- Memory summarization ----------------
+def summarize_memory(history):
+    summarization_preamble = (
+        "Summarize essential, stable facts from the conversation that will help in future therapy-style responses. "
+        "Include: user's background facts, ongoing problems, therapy preferences, exercises tried, "
+        "and any safety concerns. Keep summary concise (<= 250 words)."
+    )
+    convo_text = [f"{t.get('role').upper()} ({t.get('ts')}): {t.get('text')}" for t in history]
+    full_input = summarization_preamble + "\n\nConversation:\n" + "\n".join(convo_text)
+    resp = client.models.generate_content(model=MODEL, contents=full_input)
+    try:
+        return resp.candidates[0].content.parts[0].text.strip()
+    except Exception:
+        return ""
+
+# ---------------- Generate assistant reply ----------------
+def get_assistant_reply(memory_summary, history, user_message, profile):
+    temp_history = history + [{"role": "user", "text": user_message, "ts": datetime.now(timezone.utc).isoformat()}]
+    prompt = build_prompt(memory_summary, temp_history, profile)
+    resp = client.models.generate_content(model=MODEL, contents=prompt)
+    try:
+        return resp.candidates[0].content.parts[0].text.strip()
+    except Exception:
+        return "Sorry, I couldn't generate a response right now."
+
+# ---------------- Main chat loop ----------------
+def chat_loop(user_id="default_user"):
+    history = load_history()
+    memory_summary = load_memory_summary()
+
+    profile = get_user_profile(user_id)
+    if not profile:
+        profile = run_onboarding(user_id)
+
+    print("\nClario chat (type 'exit' to quit). The assistant will remember this conversation.")
+    while True:
+        user_input = input("\nYou: ").strip()
+        if not user_input:
+            continue
+        if user_input.lower() in ("exit", "quit"):
+            print("Ending session. Conversation saved.")
+            break
+
+        # Save user message
+        user_turn = {"role": "user", "text": user_input, "ts": datetime.now(timezone.utc).isoformat()}
+        history.append(user_turn)
+        save_history(history)
+        save_chat_message(user_id, "user", user_input)
+
+        # Update relation map
+        update_relations(user_id, user_input)
+
+        # Memory summarization
+        if len(history) >= SUMMARY_TRIGGER and (len(history) % SUMMARY_TRIGGER == 0):
+            print("(Updating memory summary...)")
+            memory_summary = summarize_memory(history)
+            save_memory_summary(memory_summary)
+            print("(Memory updated.)")
+
+        # Assistant reply
+        reply = get_assistant_reply(memory_summary, history, user_input, profile)
+        assistant_turn = {"role": "assistant", "text": reply, "ts": datetime.now(timezone.utc).isoformat()}
+        history.append(assistant_turn)
+        save_history(history)
+        save_chat_message(user_id, "assistant", reply)
+
+        print("\nClario:", reply)
+
+# ---------------- Entrypoint ----------------
+if __name__ == "__main__":
+    chat_loop()
